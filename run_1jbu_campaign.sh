@@ -14,10 +14,11 @@ set -euo pipefail
 
 RFAB="$HOME/RFantibody"
 
-TARGET="$HOME/Downloads/1jbu_noX.pdb"
+TARGET="$HOME/RFantibody/1jbu_noX_rfantibody.pdb"
+RESIDUE_MAP="$HOME/RFantibody/1jbu_residue_mapping.tsv"
 FRAMEWORK="$RFAB/scripts/examples/example_inputs/h-NbBCII10.pdb"
 
-BASE="$HOME/Documents/RFantibody_outputs/1jbu_h3_campaign"
+BASE="$HOME/Documents/RFantibody_outputs/1jbu_test_campaign_japhybinding3"
 
 RFDIR="$BASE/04_rfdiffusion"
 FILTERDIR="$BASE/04b_filtered"
@@ -66,18 +67,92 @@ export CUDA_VISIBLE_DEVICES=0
 # CAMPAIGN SETTINGS
 # ============================================================
 
-NUM_BACKBONES=500
+NUM_BACKBONES=1
 SEQS_PER_BACKBONE=5
 MPNN_TEMP=0.2
 
 MINDIST_MAX=6.0
 AVERAGEMIN_MAX=10.0
 
-HOTSPOTS="H59,H61,H90,H94,H95,H96,H251,H253" #Glycol Binding
-HOTSPOTS+="H20,H134,H135,H137,H184,H207" #Japhybinding1
+# HOTSPOTS="H59,H61,H90,H94,H95,H96,H251,H253," #Glycol Binding
+# HOTSPOTS+="H20,H134,H135,H137,H184,H207" #Japhybinding1 interferes with TF...
+HOTSPOTS_ORIGINAL="H160,H169,H170,H170A,H184,H222,H225" #japhybinding3
+# ============================================================
+# TRANSLATE ORIGINAL PDB HOTSPOTS -> RFANTIBODY-SAFE NUMBERING
+# ============================================================
+
+if [ ! -s "$RESIDUE_MAP" ]; then
+    echo "ERROR: Residue mapping file not found:"
+    echo "$RESIDUE_MAP"
+    exit 1
+fi
+
+HOTSPOTS="$(
+    HOTSPOTS_ORIGINAL="$HOTSPOTS_ORIGINAL" \
+    RESIDUE_MAP="$RESIDUE_MAP" \
+    python3 - <<'PY'
+import csv
+import os
+import re
+import sys
+
+mapping_file = os.environ["RESIDUE_MAP"]
+
+requested = [
+    x.strip()
+    for x in os.environ["HOTSPOTS_ORIGINAL"].split(",")
+    if x.strip()
+]
+
+mapping = {}
+
+with open(mapping_file) as f:
+    reader = csv.DictReader(f, delimiter="\t")
+
+    for row in reader:
+        mapping[row["old_id"]] = row["new_id"]
+
+translated = []
+
+for hotspot in requested:
+
+    # Examples accepted:
+    # H170
+    # H170A
+    # H170G
+    # L95
+    if not re.fullmatch(r"[A-Za-z0-9]-?\d+[A-Za-z]?", hotspot):
+        print(
+            f"ERROR: Invalid hotspot notation: {hotspot}",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    if hotspot not in mapping:
+        print(
+            f"ERROR: Hotspot {hotspot} was not found "
+            f"in the original PDB mapping.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    translated.append(mapping[hotspot])
+
+print(",".join(translated))
+PY
+)"
+
+echo
+echo "Original hotspot numbering:"
+echo "  $HOTSPOTS_ORIGINAL"
+
+echo
+echo "RFantibody hotspot numbering:"
+echo "  $HOTSPOTS"
+echo
 
 REGIMES=(
-    "short|H1:7,H2:6,H3:5-10"
+    "long|H1:7,H2:6,H3:10-16"
 )
 
 
@@ -547,6 +622,8 @@ for ITEM in "${REGIMES[@]}"; do
     echo "------------------------------------------------------------"
     echo "Extracting: $NAME"
     echo "------------------------------------------------------------"
+
+    REGIME_START="$(date +%s)"
 
     rm -rf "$OUTDIR"
     mkdir -p "$OUTDIR"

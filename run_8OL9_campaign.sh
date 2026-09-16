@@ -2,11 +2,9 @@
 set -euo pipefail
 
 # ============================================================
-# 6i58 / h-NbBCII10 H3-LENGTH CAMPAIGN
+# 8OL9/ h-NbBCII10 CAMPAIGN
 #
-# targets/6i58_exported.pdb
-#   -> clean chain A
-#   -> RFdiffusion
+# RFdiffusion
 #   -> geometry filter
 #   -> ProteinMPNN
 #   -> RF2
@@ -16,22 +14,35 @@ set -euo pipefail
 
 RFAB="$HOME/RFantibody"
 
-BASE="$HOME/Documents/RFantibody_outputs/6i58_h3_campaign"
+TARGET="$HOME/RFantibody/8OL9_fIXa.pdb"
+FRAMEWORK="$RFAB/scripts/examples/example_inputs/h-NbBCII10.pdb"
 
-PREPDIR="$BASE/00_target"
+BASE="$HOME/Documents/RFantibody_outputs/8OL9_campaign"
+
 RFDIR="$BASE/04_rfdiffusion"
 FILTERDIR="$BASE/04b_filtered"
 MPNNDIR="$BASE/05_mpnn"
 RF2DIR="$BASE/06_rf2"
 FINALDIR="$BASE/07_final_pdbs"
 
-SOURCE="$PREPDIR/6i58_exported.pdb"
-TARGET="$PREPDIR/6i58_clean_chainA.pdb"
+SCRIPT_START="$(date +%s)"
 
-FRAMEWORK="$RFAB/scripts/examples/example_inputs/h-NbBCII10.pdb"
+format_duration () {
+    local seconds="$1"
+    printf '%02dh:%02dm:%02ds' \
+        "$((seconds / 3600))" \
+        "$(((seconds % 3600) / 60))" \
+        "$((seconds % 60))"
+}
+
+report_duration () {
+    local label="$1"
+    local start="$2"
+    local elapsed=$(($(date +%s) - start))
+    printf '%s took %s\n' "$label" "$(format_duration "$elapsed")"
+}
 
 mkdir -p \
-    "$PREPDIR" \
     "$RFDIR" \
     "$FILTERDIR" \
     "$MPNNDIR" \
@@ -48,60 +59,42 @@ export PATH="$HOME/.local/bin:$PATH"
 export LD_LIBRARY_PATH="$HOME/.conda/envs/rfantibody-runtime/lib:${LD_LIBRARY_PATH:-}"
 export DGLBACKEND=pytorch
 
-
-
-# GPU 0
+# gpu2
 export CUDA_VISIBLE_DEVICES=GPU-589685a4-8d09-fe8d-b4d2-5268717630e0
-
 
 # ============================================================
 # CAMPAIGN SETTINGS
 # ============================================================
 
-NUM_BACKBONES=50
-SEQS_PER_BACKBONE=5
+NUM_BACKBONES=500
+SEQS_PER_BACKBONE=10
 MPNN_TEMP=0.2
 
-MINDIST_MAX=6.0
+MINDIST_MAX=4.5
 AVERAGEMIN_MAX=10.0
 
-HOTSPOTS="A181,A182,A183,A184,A185,A186,A187,A188,A189,A190,A191,A192"
+HOTSPOTS="H211,H212,H214,H215,H216,H217" #Japhybinding1
+# HOTSPOTS+="" #Japhybinding1
 
 REGIMES=(
-    "short|H1:7,H2:6,H3:5-9"
-    "medium|H1:7,H2:6,H3:8-12"
-    "long|H1:7,H2:6,H3:10-16"
+    "short|H1:7,H2:6,H3:5-10"
 )
 
 
 # ============================================================
-# HELPER
+# BASIC CHECKS
 # ============================================================
 
-qv_count () {
-    local qv="$1"
-
-    if [ ! -s "$qv" ]; then
-        echo 0
-        return
-    fi
-
-    uv run qvls "$qv" 2>/dev/null | wc -l
-}
-
-
-# ============================================================
-# PREFLIGHT
-# ============================================================
+PREFLIGHT_START="$(date +%s)"
 
 echo
 echo "============================================================"
 echo "PREFLIGHT"
 echo "============================================================"
 
-if [ ! -s "$SOURCE" ]; then
-    echo "ERROR: Source PDB not found:"
-    echo "$SOURCE"
+if [ ! -s "$TARGET" ]; then
+    echo "ERROR: Target not found:"
+    echo "$TARGET"
     exit 1
 fi
 
@@ -118,152 +111,28 @@ print("CUDA available:", torch.cuda.is_available())
 print("Visible GPU count:", torch.cuda.device_count())
 
 if not torch.cuda.is_available():
-    raise SystemExit("ERROR: CUDA unavailable")
+    raise SystemExit("ERROR: CUDA is unavailable")
 
 print("GPU:", torch.cuda.get_device_name(0))
 PY
 
-
-# ============================================================
-# STEP 0 — CLEAN TARGET
-# ============================================================
-
-echo
-echo "============================================================"
-echo "STEP 0: Cleaning 6i58_exported.pdb"
-echo "============================================================"
-
-SOURCE="$SOURCE" TARGET="$TARGET" uv run python - <<'PY'
-import os
-from pathlib import Path
-
-src = Path(os.environ["SOURCE"])
-dst = Path(os.environ["TARGET"])
-
-kept = []
-seen_model = False
-
-with src.open(errors="ignore") as f:
-    for line in f:
-
-        if line.startswith("MODEL"):
-            if seen_model:
-                break
-            seen_model = True
-            continue
-
-        if line.startswith("ENDMDL"):
-            if seen_model:
-                break
-            continue
-
-        if not line.startswith("ATOM"):
-            continue
-
-        # Chain A only
-        if line[21:22] != "A":
-            continue
-
-        # Keep blank/A altloc only
-        altloc = line[16:17]
-
-        if altloc not in (" ", "A"):
-            continue
-
-        if altloc == "A":
-            line = line[:16] + " " + line[17:]
-
-        kept.append(line.rstrip("\n"))
-
-if not kept:
-    raise SystemExit(
-        "ERROR: No chain A ATOM records found."
-    )
-
-with dst.open("w") as out:
-    for line in kept:
-        out.write(line + "\n")
-
-    out.write("TER\n")
-    out.write("END\n")
-
-print(f"Wrote {len(kept)} atoms")
-print(dst)
-PY
+report_duration "Preflight" "$PREFLIGHT_START"
 
 
 # ============================================================
-# VERIFY HOTSPOTS
+# HELPER: COUNT QUIVER ENTRIES
 # ============================================================
 
-echo
-echo "============================================================"
-echo "Checking A180-A190"
-echo "============================================================"
+qv_count () {
+    local qv="$1"
 
-TARGET="$TARGET" uv run python - <<'PY'
-import os
-from pathlib import Path
+    if [ ! -s "$qv" ]; then
+        echo 0
+        return
+    fi
 
-pdb = Path(os.environ["TARGET"])
-
-residues = {}
-
-with pdb.open() as f:
-    for line in f:
-
-        if not line.startswith("ATOM"):
-            continue
-
-        if line[21:22] != "A":
-            continue
-
-        try:
-            resnum = int(line[22:26])
-        except ValueError:
-            continue
-
-        resname = line[17:20].strip()
-        atom = line[12:16].strip()
-
-        residues.setdefault(
-            resnum,
-            {"name": resname, "atoms": set()}
-        )
-
-        residues[resnum]["atoms"].add(atom)
-
-bad = []
-
-for n in range(180, 191):
-
-    r = residues.get(n)
-
-    if r is None:
-        print(f"A{n}: MISSING")
-        bad.append(n)
-        continue
-
-    backbone_ok = all(
-        atom in r["atoms"]
-        for atom in ("N", "CA", "C")
-    )
-
-    status = "OK" if backbone_ok else "INCOMPLETE"
-
-    print(f"A{n}: {r['name']:3s} {status}")
-
-    if not backbone_ok:
-        bad.append(n)
-
-if bad:
-    raise SystemExit(
-        "ERROR: Missing/incomplete hotspot residues: "
-        + ", ".join(map(str, bad))
-    )
-
-print("All hotspot residues OK.")
-PY
+    uv run qvls "$qv" 2>/dev/null | wc -l
+}
 
 
 # ============================================================
@@ -274,6 +143,8 @@ echo
 echo "============================================================"
 echo "STEP 4: RFdiffusion"
 echo "============================================================"
+
+RFDIFFUSION_START="$(date +%s)"
 
 for ITEM in "${REGIMES[@]}"; do
 
@@ -286,18 +157,24 @@ for ITEM in "${REGIMES[@]}"; do
     echo
     echo "------------------------------------------------------------"
     echo "REGIME: $NAME"
-    echo "LOOPS: $LOOPS"
+    echo "LOOPS:  $LOOPS"
     echo "------------------------------------------------------------"
+
+    REGIME_START="$(date +%s)"
 
     EXISTING="$(qv_count "$OUTQV")"
 
     if [ "$EXISTING" -eq "$NUM_BACKBONES" ]; then
-
-        echo "RFdiffusion already complete: $EXISTING"
-
+        echo "RFdiffusion already complete: $EXISTING designs"
     else
 
-        rm -f "$OUTQV" "$OUTSC"
+        if [ -e "$OUTQV" ]; then
+            echo "Removing incomplete RFdiffusion output:"
+            echo "$OUTQV"
+            rm -f "$OUTQV"
+        fi
+
+        rm -f "$OUTSC"
 
         uv run rfdiffusion \
             --target "$TARGET" \
@@ -310,34 +187,41 @@ for ITEM in "${REGIMES[@]}"; do
         COUNT="$(qv_count "$OUTQV")"
 
         if [ "$COUNT" -ne "$NUM_BACKBONES" ]; then
-            echo "ERROR: Expected $NUM_BACKBONES designs."
+            echo "ERROR: Expected $NUM_BACKBONES RFdiffusion designs."
             echo "Found: $COUNT"
             exit 1
         fi
     fi
 
+    # qvscorefile creates sibling .sc itself.
     rm -f "$OUTSC"
-
     uv run qvscorefile "$OUTQV"
 
     if [ ! -s "$OUTSC" ]; then
-        echo "ERROR: Scorefile not created:"
+        echo "ERROR: RFdiffusion scorefile was not created:"
         echo "$OUTSC"
         exit 1
     fi
 
+    report_duration "RFdiffusion ($NAME)" "$REGIME_START"
+
+done
+
+report_duration "Step 4 RFdiffusion" "$RFDIFFUSION_START"
 
 
 # ============================================================
-# STEP 4B — FILTER
+# STEP 4B — FILTER RFDIFFUSION BACKBONES
 # ============================================================
 
 echo
 echo "============================================================"
-echo "STEP 4B: Geometry filtering"
+echo "STEP 4B: RFdiffusion geometry filtering"
 echo "mindist <= $MINDIST_MAX"
 echo "averagemin <= $AVERAGEMIN_MAX"
 echo "============================================================"
+
+FILTER_START="$(date +%s)"
 
 for ITEM in "${REGIMES[@]}"; do
 
@@ -350,13 +234,22 @@ for ITEM in "${REGIMES[@]}"; do
     SUMMARY="$FILTERDIR/${NAME}_filter_summary.tsv"
     TEMPDIR="$FILTERDIR/${NAME}_temp_pdbs"
 
+    echo
+    echo "------------------------------------------------------------"
+    echo "Filtering: $NAME"
+    echo "------------------------------------------------------------"
+
+    REGIME_START="$(date +%s)"
+
     rm -rf "$TEMPDIR"
     mkdir -p "$TEMPDIR"
 
+    # Extract all RFdiffusion designs.
     uv run qvextract \
         "$INPUT_QV" \
         -o "$TEMPDIR"
 
+    # Parse scorefile and delete failing structures.
     INPUT_SC="$INPUT_SC" \
     TEMPDIR="$TEMPDIR" \
     SUMMARY="$SUMMARY" \
@@ -371,20 +264,19 @@ tempdir = Path(os.environ["TEMPDIR"])
 summary = Path(os.environ["SUMMARY"])
 
 mindist_max = float(os.environ["MINDIST_MAX"])
-average_max = float(os.environ["AVERAGEMIN_MAX"])
+averagemin_max = float(os.environ["AVERAGEMIN_MAX"])
 
 with sc.open() as f:
     header = f.readline().split()
 
     mindist_i = header.index("mindist")
-    average_i = header.index("averagemin")
+    averagemin_i = header.index("averagemin")
     tag_i = header.index("tag")
 
     rows = []
     passing = set()
 
     for line in f:
-
         if not line.strip():
             continue
 
@@ -392,64 +284,61 @@ with sc.open() as f:
 
         try:
             mindist = float(cols[mindist_i])
-            average = float(cols[average_i])
-            tag = cols[tag_i]
+            averagemin = float(cols[averagemin_i])
         except (ValueError, IndexError):
             continue
 
+        tag = cols[tag_i]
+
         passed = (
             mindist <= mindist_max
-            and average <= average_max
+            and averagemin <= averagemin_max
         )
 
-        rows.append((tag, mindist, average, passed))
+        rows.append((tag, mindist, averagemin, passed))
 
         if passed:
             passing.add(tag)
 
 with summary.open("w") as out:
-
     out.write("tag\tmindist\taveragemin\tpass\n")
 
-    for tag, mindist, average, passed in rows:
+    for tag, mindist, averagemin, passed in rows:
         out.write(
             f"{tag}\t{mindist:.3f}\t"
-            f"{average:.3f}\t{passed}\n"
+            f"{averagemin:.3f}\t{passed}\n"
         )
 
 for pdb in tempdir.glob("*.pdb"):
-
     if pdb.stem not in passing:
         pdb.unlink()
 
 print(f"Passed {len(passing)}/{len(rows)} designs")
 
-for tag, mindist, average, passed in rows:
-
+for tag, mindist, averagemin, passed in rows:
     if passed:
         print(
             f" PASS {tag:25s} "
             f"mindist={mindist:.2f} "
-            f"averagemin={average:.2f}"
+            f"averagemin={averagemin:.2f}"
         )
 PY
 
-    PASS_COUNT="$(
-        find "$TEMPDIR" \
-        -maxdepth 1 \
-        -name '*.pdb' \
-        | wc -l
-    )"
+    PASS_COUNT="$(find "$TEMPDIR" -maxdepth 1 -name '*.pdb' | wc -l)"
 
+    echo
     echo "Passing backbones: $PASS_COUNT"
 
     rm -f "$FILTERED_QV"
 
     if [ "$PASS_COUNT" -eq 0 ]; then
-        echo "No passing designs for $NAME."
+        echo "WARNING: No passing backbones for $NAME."
+        echo "Skipping ProteinMPNN/RF2 for this regime."
+        report_duration "Filtering ($NAME)" "$REGIME_START"
         continue
     fi
 
+    # qvfrompdbs writes Quiver binary to stdout.
     uv run qvfrompdbs \
         "$TEMPDIR"/*.pdb \
         > "$FILTERED_QV"
@@ -458,10 +347,18 @@ PY
 
     if [ "$CREATED" -ne "$PASS_COUNT" ]; then
         echo "ERROR: Filtered Quiver count mismatch."
+        echo "Expected: $PASS_COUNT"
+        echo "Created:  $CREATED"
         exit 1
     fi
 
+    echo "Filtered Quiver contains $CREATED backbones."
+
+    report_duration "Filtering ($NAME)" "$REGIME_START"
+
 done
+
+report_duration "Step 4B geometry filtering" "$FILTER_START"
 
 
 # ============================================================
@@ -473,6 +370,8 @@ echo "============================================================"
 echo "STEP 5: ProteinMPNN"
 echo "============================================================"
 
+MPNN_START="$(date +%s)"
+
 for ITEM in "${REGIMES[@]}"; do
 
     NAME="${ITEM%%|*}"
@@ -480,26 +379,43 @@ for ITEM in "${REGIMES[@]}"; do
     INPUT="$FILTERDIR/${NAME}_filtered.qv"
     OUTPUT="$MPNNDIR/${NAME}_mpnn.qv"
 
+    echo
+    echo "------------------------------------------------------------"
+    echo "ProteinMPNN: $NAME"
+    echo "------------------------------------------------------------"
+
+    REGIME_START="$(date +%s)"
+
     if [ ! -s "$INPUT" ]; then
-        echo "$NAME: no filtered backbones, skipping."
+        echo "No filtered backbones. Skipping."
+        report_duration "ProteinMPNN ($NAME)" "$REGIME_START"
         continue
     fi
 
     BACKBONES="$(qv_count "$INPUT")"
     EXPECTED=$((BACKBONES * SEQS_PER_BACKBONE))
 
-    EXISTING=0
-
     if [ -s "$OUTPUT" ]; then
         EXISTING="$(qv_count "$OUTPUT")"
+    else
+        EXISTING=0
     fi
 
     if [ "$EXISTING" -eq "$EXPECTED" ]; then
-        echo "$NAME ProteinMPNN already complete."
+        echo "ProteinMPNN already complete:"
+        echo "$EXISTING sequences"
+        report_duration "ProteinMPNN ($NAME)" "$REGIME_START"
         continue
     fi
 
-    rm -f "$OUTPUT"
+    if [ -e "$OUTPUT" ]; then
+        echo "Removing incomplete ProteinMPNN output."
+        rm -f "$OUTPUT"
+    fi
+
+    echo "Backbones: $BACKBONES"
+    echo "Sequences/backbone: $SEQS_PER_BACKBONE"
+    echo "Expected sequences: $EXPECTED"
 
     uv run proteinmpnn \
         -q "$INPUT" \
@@ -507,9 +423,20 @@ for ITEM in "${REGIMES[@]}"; do
         -n "$SEQS_PER_BACKBONE" \
         -t "$MPNN_TEMP"
 
-    echo "$NAME ProteinMPNN: $(qv_count "$OUTPUT") sequences"
+    CREATED="$(qv_count "$OUTPUT")"
+
+    echo "ProteinMPNN generated: $CREATED"
+
+    if [ "$CREATED" -ne "$EXPECTED" ]; then
+        echo "WARNING: Expected $EXPECTED sequence designs."
+        echo "ProteinMPNN produced $CREATED."
+    fi
+
+    report_duration "ProteinMPNN ($NAME)" "$REGIME_START"
 
 done
+
+report_duration "Step 5 ProteinMPNN" "$MPNN_START"
 
 
 # ============================================================
@@ -518,8 +445,10 @@ done
 
 echo
 echo "============================================================"
-echo "STEP 6: RF2"
+echo "STEP 6: RF2 validation"
 echo "============================================================"
+
+RF2_START="$(date +%s)"
 
 for ITEM in "${REGIMES[@]}"; do
 
@@ -529,51 +458,78 @@ for ITEM in "${REGIMES[@]}"; do
     OUTPUT="$RF2DIR/${NAME}_rf2.qv"
     SCORE="$RF2DIR/${NAME}_rf2.sc"
 
+    echo
+    echo "------------------------------------------------------------"
+    echo "RF2: $NAME"
+    echo "------------------------------------------------------------"
+
+    REGIME_START="$(date +%s)"
+
     if [ ! -s "$INPUT" ]; then
-        echo "$NAME: no MPNN output, skipping."
+        echo "No ProteinMPNN output. Skipping."
+        report_duration "RF2 ($NAME)" "$REGIME_START"
         continue
     fi
 
     EXPECTED="$(qv_count "$INPUT")"
 
-    EXISTING=0
-
     if [ -s "$OUTPUT" ]; then
         EXISTING="$(qv_count "$OUTPUT")"
+    else
+        EXISTING=0
     fi
 
-    if [ "$EXISTING" -ne "$EXPECTED" ]; then
+    if [ "$EXISTING" -eq "$EXPECTED" ]; then
+        echo "RF2 already complete:"
+        echo "$EXISTING predictions"
+    else
 
-        rm -f "$OUTPUT"
+        if [ -e "$OUTPUT" ]; then
+            echo "Removing incomplete RF2 output."
+            rm -f "$OUTPUT"
+        fi
 
         uv run rf2 \
             -q "$INPUT" \
             --output-quiver "$OUTPUT"
-    else
-        echo "$NAME RF2 already complete."
+
+        CREATED="$(qv_count "$OUTPUT")"
+
+        echo "RF2 predictions generated: $CREATED"
+
+        if [ "$CREATED" -ne "$EXPECTED" ]; then
+            echo "WARNING: RF2 input/output count mismatch."
+            echo "Expected: $EXPECTED"
+            echo "Created:  $CREATED"
+        fi
     fi
 
     rm -f "$SCORE"
-
     uv run qvscorefile "$OUTPUT"
 
     if [ ! -s "$SCORE" ]; then
-        echo "ERROR: RF2 scorefile missing:"
+        echo "ERROR: RF2 scorefile was not created:"
         echo "$SCORE"
         exit 1
     fi
 
+    report_duration "RF2 ($NAME)" "$REGIME_START"
+
 done
+
+report_duration "Step 6 RF2 validation" "$RF2_START"
 
 
 # ============================================================
-# STEP 7 — EXTRACT FINAL PDBS
+# STEP 7 — EXTRACT RF2 PDBS
 # ============================================================
 
 echo
 echo "============================================================"
-echo "STEP 7: Extract final RF2 PDBs"
+echo "STEP 7: Extract RF2 structures"
 echo "============================================================"
+
+EXTRACT_START="$(date +%s)"
 
 for ITEM in "${REGIMES[@]}"; do
 
@@ -583,8 +539,16 @@ for ITEM in "${REGIMES[@]}"; do
     OUTDIR="$FINALDIR/$NAME"
 
     if [ ! -s "$INPUT" ]; then
+        echo "No RF2 output for $NAME. Skipping."
         continue
     fi
+
+    echo
+    echo "------------------------------------------------------------"
+    echo "Extracting: $NAME"
+    echo "------------------------------------------------------------"
+
+    REGIME_START="$(date +%s)"
 
     rm -rf "$OUTDIR"
     mkdir -p "$OUTDIR"
@@ -593,47 +557,56 @@ for ITEM in "${REGIMES[@]}"; do
         "$INPUT" \
         -o "$OUTDIR"
 
-    echo "$NAME: $(find "$OUTDIR" -maxdepth 1 -name '*.pdb' | wc -l) PDBs"
+    COUNT="$(find "$OUTDIR" -maxdepth 1 -name '*.pdb' | wc -l)"
+
+    echo "Extracted $COUNT RF2 PDBs."
+
+    report_duration "Extraction ($NAME)" "$REGIME_START"
 
 done
 
+report_duration "Step 7 RF2 extraction" "$EXTRACT_START"
+
 
 # ============================================================
-# SUMMARY
+# CAMPAIGN SUMMARY
 # ============================================================
 
 echo
 echo "============================================================"
-echo "SUMMARY"
+echo "CAMPAIGN COMPLETE"
 echo "============================================================"
-echo "6I58 H3 CAMPAIGN COMPLETE"
-echo "============================================================"
+echo
 
-printf "%-10s %-12s %-12s %-12s %-12s\n" \
+printf "%-10s %-12s %-12s %-12s\n" \
     "REGIME" \
     "RFDIFF" \
     "FILTERED" \
-    "MPNN" \
     "RF2"
 
 for ITEM in "${REGIMES[@]}"; do
 
     NAME="${ITEM%%|*}"
 
-    RFN="$(qv_count "$RFDIR/${NAME}_rfdiffusion.qv")"
-    FN="$(qv_count "$FILTERDIR/${NAME}_filtered.qv")"
-    MN="$(qv_count "$MPNNDIR/${NAME}_mpnn.qv")"
-    RN="$(qv_count "$RF2DIR/${NAME}_rf2.qv")"
+    RFQ="$RFDIR/${NAME}_rfdiffusion.qv"
+    FQ="$FILTERDIR/${NAME}_filtered.qv"
+    RQ="$RF2DIR/${NAME}_rf2.qv"
 
-    printf "%-10s %-12s %-12s %-12s %-12s\n" \
-        "$NAME" "$RFN" "$FN" "$MN" "$RN"
+    RFN="$(qv_count "$RFQ")"
+    FN="$(qv_count "$FQ")"
+    RN="$(qv_count "$RQ")"
+
+    printf "%-10s %-12s %-12s %-12s\n" \
+        "$NAME" "$RFN" "$FN" "$RN"
 
 done
 
 echo
-echo "Clean target:"
-echo "$TARGET"
-
-echo
 echo "RF2 scorefiles:"
 find "$RF2DIR" -maxdepth 1 -name '*_rf2.sc' -print | sort
+
+echo
+echo "Final RF2 PDBs:"
+echo "$FINALDIR"
+
+report_duration "Total campaign" "$SCRIPT_START"
