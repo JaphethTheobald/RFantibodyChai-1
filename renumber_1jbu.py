@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 
-# cd "$HOME/RFantibody"
+cd "$HOME/RFantibody"
 
-# ./renumber_1jbu.py \
-#     "$HOME/RFantibody/1jbu_newclean.pdb" \
-#     "$HOME/RFantibody/1jbu_newclean_renumbered.pdb" \
-#     "$HOME/RFantibody/1jbu_newclean_mapping.tsv"
+./renumber_1jbu.py \
+    "$HOME/RFantibody/1jbu_newclean.pdb" \
+    "$HOME/RFantibody/1jbu_newclean_renumbered.pdb" \
+    "$HOME/RFantibody/1jbu_newclean_mapping.tsv"
 
 from pathlib import Path
 import argparse

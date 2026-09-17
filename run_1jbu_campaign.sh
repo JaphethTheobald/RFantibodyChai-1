@@ -18,7 +18,7 @@ TARGET="$HOME/RFantibody/1jbu_noX_rfantibody.pdb"
 RESIDUE_MAP="$HOME/RFantibody/1jbu_residue_mapping.tsv"
 FRAMEWORK="$RFAB/scripts/examples/example_inputs/h-NbBCII10.pdb"
 
-BASE="$HOME/Documents/RFantibody_outputs/1jbu_test_campaign_japhybinding3"
+BASE="$HOME/Documents/RFantibody_outputs/1jbu_500_campaign_japhybinding3"
 
 RFDIR="$BASE/04_rfdiffusion"
 FILTERDIR="$BASE/04b_filtered"
@@ -67,16 +67,16 @@ export CUDA_VISIBLE_DEVICES=0
 # CAMPAIGN SETTINGS
 # ============================================================
 
-NUM_BACKBONES=1
+NUM_BACKBONES=500
 SEQS_PER_BACKBONE=5
 MPNN_TEMP=0.2
 
-MINDIST_MAX=6.0
+MINDIST_MAX=4.5
 AVERAGEMIN_MAX=10.0
 
 # HOTSPOTS="H59,H61,H90,H94,H95,H96,H251,H253," #Glycol Binding
 # HOTSPOTS+="H20,H134,H135,H137,H184,H207" #Japhybinding1 interferes with TF...
-HOTSPOTS_ORIGINAL="H160,H169,H170,H170A,H184,H222,H225" #japhybinding3
+HOTSPOTS_ORIGINAL="H170,H170A,H184,H222,H225" #japhybinding3.1
 # ============================================================
 # TRANSLATE ORIGINAL PDB HOTSPOTS -> RFANTIBODY-SAFE NUMBERING
 # ============================================================

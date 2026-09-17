@@ -127,32 +127,9 @@ def get_next_frames(xt, px0, t, diffuser, so3_type, diffusion_mask, noise_scale=
 
     R_t, Ca_t = rigid_from_3_points(N_t, Ca_t, C_t)
 
-    # Fixed target/motif positions are masked below and do not need
-    # their frames normalized by scipy. Only normalize movable positions.
-    R_0_torch = R_0.squeeze()
-    R_t_torch = R_t.squeeze()
-
-    if torch.is_tensor(diffusion_mask):
-        mask_np = diffusion_mask.detach().cpu().numpy().astype(bool)
-    else:
-        mask_np = np.asarray(diffusion_mask, dtype=bool)
-
-    L = R_t_torch.shape[0]
-    movable = ~mask_np
-
-    R_0_np = np.broadcast_to(np.identity(3), (L, 3, 3)).copy()
-    R_t_np = np.broadcast_to(np.identity(3), (L, 3, 3)).copy()
-
-    R_0_np[movable] = scipy_R.from_matrix(
-        R_0_torch[movable].numpy()
-    ).as_matrix()
-
-    R_t_np[movable] = scipy_R.from_matrix(
-        R_t_torch[movable].numpy()
-    ).as_matrix()
-
-    R_0 = R_0_np
-    R_t = R_t_np
+    # this must be to normalize them or something
+    R_0 = scipy_R.from_matrix(R_0.squeeze().numpy()).as_matrix()
+    R_t = scipy_R.from_matrix(R_t.squeeze().numpy()).as_matrix()
 
 
     L = R_t.shape[0]
@@ -1609,4 +1586,3 @@ def assemble_config_from_chk(conf: DictConfig):
     
     # TODO change this so we don't have to load the model twice
     pass
-
