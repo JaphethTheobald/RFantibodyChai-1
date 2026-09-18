@@ -4,8 +4,7 @@ set -euo pipefail
 # ============================================================
 # 6i58 / h-NbBCII10 H3-LENGTH CAMPAIGN
 #
-# targets/6i58_exported.pdb
-#   -> clean chain A
+# 6i58_trunc_1h9.pdb
 #   -> RFdiffusion
 #   -> geometry filter
 #   -> ProteinMPNN
@@ -16,7 +15,7 @@ set -euo pipefail
 
 RFAB="$HOME/RFantibody"
 
-BASE="$HOME/Documents/RFantibody_outputs/6i58_long_binding1_campaign"
+BASE="$HOME/Documents/RFantibody_outputs/6i58_long_short_no_clash_with_light_chain_binding1_500_campaign"
 
 PREPDIR="$BASE/00_target"
 RFDIR="$BASE/04_rfdiffusion"
@@ -25,8 +24,7 @@ MPNNDIR="$BASE/05_mpnn"
 RF2DIR="$BASE/06_rf2"
 FINALDIR="$BASE/07_final_pdbs"
 
-SOURCE="$PREPDIR/6i58_exported.pdb"
-TARGET="$PREPDIR/6i58_clean_chainA.pdb"
+TARGET="$PREPDIR/6i58_trunc_1h9.pdb"
 
 FRAMEWORK="$RFAB/scripts/examples/example_inputs/h-NbBCII10.pdb"
 
@@ -58,17 +56,18 @@ export CUDA_VISIBLE_DEVICES=GPU-589685a4-8d09-fe8d-b4d2-5268717630e0
 # CAMPAIGN SETTINGS
 # ============================================================
 
-NUM_BACKBONES=100
+NUM_BACKBONES=500
 SEQS_PER_BACKBONE=5
 MPNN_TEMP=0.2
 
 MINDIST_MAX=4.5
-AVERAGEMIN_MAX=10.0
+AVERAGEMIN_MAX=100.0
 
-HOTSPOTS="A181,A182,A183,A184,A185,A186,A187,A188,A189,A190,A191,A192" #In paper, 1h9 nanobody bound here
+HOTSPOTS="A186,A187,A188,A189,A190,A191,A192" #NOW UPDATED (rm 181-185) to not interfere with the light chain of factor IX. In paper, 1h9 nanobody bound here
 
 REGIMES=(
     "long|H1:7,H2:6,H3:10-16"
+    "short|H1:7,H2:6,H3:5-10"
 )
 
 
@@ -97,9 +96,9 @@ echo "============================================================"
 echo "PREFLIGHT"
 echo "============================================================"
 
-if [ ! -s "$SOURCE" ]; then
-    echo "ERROR: Source PDB not found:"
-    echo "$SOURCE"
+if [ ! -s "$TARGET" ]; then
+    echo "ERROR: Target PDB not found:"
+    echo "$TARGET"
     exit 1
 fi
 
@@ -119,74 +118,6 @@ if not torch.cuda.is_available():
     raise SystemExit("ERROR: CUDA unavailable")
 
 print("GPU:", torch.cuda.get_device_name(0))
-PY
-
-
-# ============================================================
-# STEP 0 — CLEAN TARGET
-# ============================================================
-
-echo
-echo "============================================================"
-echo "STEP 0: Cleaning 6i58_exported.pdb"
-echo "============================================================"
-
-SOURCE="$SOURCE" TARGET="$TARGET" uv run python - <<'PY'
-import os
-from pathlib import Path
-
-src = Path(os.environ["SOURCE"])
-dst = Path(os.environ["TARGET"])
-
-kept = []
-seen_model = False
-
-with src.open(errors="ignore") as f:
-    for line in f:
-
-        if line.startswith("MODEL"):
-            if seen_model:
-                break
-            seen_model = True
-            continue
-
-        if line.startswith("ENDMDL"):
-            if seen_model:
-                break
-            continue
-
-        if not line.startswith("ATOM"):
-            continue
-
-        # Chain A only
-        if line[21:22] != "A":
-            continue
-
-        # Keep blank/A altloc only
-        altloc = line[16:17]
-
-        if altloc not in (" ", "A"):
-            continue
-
-        if altloc == "A":
-            line = line[:16] + " " + line[17:]
-
-        kept.append(line.rstrip("\n"))
-
-if not kept:
-    raise SystemExit(
-        "ERROR: No chain A ATOM records found."
-    )
-
-with dst.open("w") as out:
-    for line in kept:
-        out.write(line + "\n")
-
-    out.write("TER\n")
-    out.write("END\n")
-
-print(f"Wrote {len(kept)} atoms")
-print(dst)
 PY
 
 

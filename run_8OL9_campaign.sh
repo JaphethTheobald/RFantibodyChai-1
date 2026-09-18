@@ -14,10 +14,10 @@ set -euo pipefail
 
 RFAB="$HOME/RFantibody"
 
-TARGET="$HOME/RFantibody/8OL9_fIXa.pdb"
+TARGET="$HOME/RFantibody/8OL9_trunc_clean_japhybinding1.pdb"
 FRAMEWORK="$RFAB/scripts/examples/example_inputs/h-NbBCII10.pdb"
 
-BASE="$HOME/Documents/RFantibody_outputs/8OL9_campaign"
+BASE="$HOME/Documents/RFantibody_outputs/8OL9_test_campaign"
 
 RFDIR="$BASE/04_rfdiffusion"
 FILTERDIR="$BASE/04b_filtered"
@@ -66,18 +66,18 @@ export CUDA_VISIBLE_DEVICES=GPU-589685a4-8d09-fe8d-b4d2-5268717630e0
 # CAMPAIGN SETTINGS
 # ============================================================
 
-NUM_BACKBONES=500
-SEQS_PER_BACKBONE=10
+NUM_BACKBONES=2
+SEQS_PER_BACKBONE=2
 MPNN_TEMP=0.2
 
 MINDIST_MAX=4.5
 AVERAGEMIN_MAX=10.0
 
-HOTSPOTS="H211,H212,H214,H215,H216,H217" #Imitates FaB in crystal structure
-# HOTSPOTS+="" #Japhybinding1
+# HOTSPOTS="H212,H215,H216,H217" #Imitates FaB in crystal structure
+HOTSPOTS="H212" #force helix
 
 REGIMES=(
-    "short|H1:7,H2:6,H3:5-10"
+    "long|H1:7,H2:6,H3:7-10"
 )
 
 
@@ -564,8 +564,6 @@ for ITEM in "${REGIMES[@]}"; do
     report_duration "Extraction ($NAME)" "$REGIME_START"
 
 done
-
-report_duration "Step 7 RF2 extraction" "$EXTRACT_START"
 
 
 # ============================================================

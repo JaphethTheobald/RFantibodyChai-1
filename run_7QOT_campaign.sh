@@ -17,7 +17,7 @@ RFAB="$HOME/RFantibody"
 TARGET="$HOME/RFantibody/7QOTalltrunc.pdb"
 FRAMEWORK="$RFAB/scripts/examples/example_inputs/h-NbBCII10.pdb"
 
-BASE="$HOME/Documents/RFantibody_outputs/7QOT_500_japhybinding4_campaign"
+BASE="$HOME/Documents/RFantibody_outputs/7QOT_test_japhybinding_tworegimes_campaign"
 
 RFDIR="$BASE/04_rfdiffusion"
 FILTERDIR="$BASE/04b_filtered"
@@ -66,8 +66,8 @@ export CUDA_VISIBLE_DEVICES=GPU-589685a4-8d09-fe8d-b4d2-5268717630e0
 # CAMPAIGN SETTINGS
 # ============================================================
 
-NUM_BACKBONES=500
-SEQS_PER_BACKBONE=10
+NUM_BACKBONES=50
+SEQS_PER_BACKBONE=5
 MPNN_TEMP=0.2
 
 MINDIST_MAX=4.5
@@ -75,9 +75,15 @@ AVERAGEMIN_MAX=10.0
 
 HOTSPOTS="H224,H228,H229,H233,H253" #Japhybinding4 interactions with H196 H238 not well resolved on HK peptide, 
 HOTSPOTS2="H105,H107,H127,H151,H243" #Japhybinding5
+FRAMEWORK2="$RFAB/scripts/examples/example_inputs/h-NbBCII10.pdb"
+TARGET2="$HOME/RFantibody/7QOTA2A3trunc.pdb"
 
+# Regime format:
+#   name|loops|base/framework PDB|target PDB|hotspots
+# The legacy name|loops format uses the global values above.
 REGIMES=(
-    "long|H1:7,H2:6,H3:10-16"
+    "long|H1:7,H2:6,H3:10-16|$FRAMEWORK|$TARGET|$HOTSPOTS"
+    "long|H1:7,H2:6,H3:10-16|$FRAMEWORK2|$TARGET2|$HOTSPOTS2"
 )
 
 
@@ -148,8 +154,28 @@ RFDIFFUSION_START="$(date +%s)"
 
 for ITEM in "${REGIMES[@]}"; do
 
-    NAME="${ITEM%%|*}"
-    LOOPS="${ITEM#*|}"
+    IFS='|' read -r NAME LOOPS REGIME_BASE REGIME_TARGET REGIME_HOTSPOTS <<< "$ITEM"
+
+    REGIME_BASE="${REGIME_BASE:-$FRAMEWORK}"
+    REGIME_TARGET="${REGIME_TARGET:-$TARGET}"
+    REGIME_HOTSPOTS="${REGIME_HOTSPOTS:-$HOTSPOTS}"
+
+    if [ ! -s "$REGIME_BASE" ]; then
+        echo "ERROR: Base/framework not found for regime $NAME:"
+        echo "$REGIME_BASE"
+        exit 1
+    fi
+
+    if [ ! -s "$REGIME_TARGET" ]; then
+        echo "ERROR: Target not found for regime $NAME:"
+        echo "$REGIME_TARGET"
+        exit 1
+    fi
+
+    if [ -z "$REGIME_HOTSPOTS" ]; then
+        echo "ERROR: No hotspots configured for regime $NAME."
+        exit 1
+    fi
 
     OUTQV="$RFDIR/${NAME}_rfdiffusion.qv"
     OUTSC="$RFDIR/${NAME}_rfdiffusion.sc"
@@ -158,6 +184,9 @@ for ITEM in "${REGIMES[@]}"; do
     echo "------------------------------------------------------------"
     echo "REGIME: $NAME"
     echo "LOOPS:  $LOOPS"
+    echo "BASE:   $REGIME_BASE"
+    echo "TARGET: $REGIME_TARGET"
+    echo "HOTSPOTS: $REGIME_HOTSPOTS"
     echo "------------------------------------------------------------"
 
     REGIME_START="$(date +%s)"
@@ -177,12 +206,12 @@ for ITEM in "${REGIMES[@]}"; do
         rm -f "$OUTSC"
 
         uv run rfdiffusion \
-            --target "$TARGET" \
-            --framework "$FRAMEWORK" \
+            --target "$REGIME_TARGET" \
+            --framework "$REGIME_BASE" \
             --output-quiver "$OUTQV" \
             --num-designs "$NUM_BACKBONES" \
             --design-loops "$LOOPS" \
-            --hotspots "$HOTSPOTS"
+            --hotspots "$REGIME_HOTSPOTS"
 
         COUNT="$(qv_count "$OUTQV")"
 

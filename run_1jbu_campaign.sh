@@ -18,7 +18,7 @@ TARGET="$HOME/RFantibody/1jbu_noX_rfantibody.pdb"
 RESIDUE_MAP="$HOME/RFantibody/1jbu_residue_mapping.tsv"
 FRAMEWORK="$RFAB/scripts/examples/example_inputs/h-NbBCII10.pdb"
 
-BASE="$HOME/Documents/RFantibody_outputs/1jbu_500_campaign_japhybinding3"
+BASE="$HOME/Documents/RFantibody_outputs/1jbu_short_500_campaign_japhybinding3"
 
 RFDIR="$BASE/04_rfdiffusion"
 FILTERDIR="$BASE/04b_filtered"
@@ -67,7 +67,7 @@ export CUDA_VISIBLE_DEVICES=0
 # CAMPAIGN SETTINGS
 # ============================================================
 
-NUM_BACKBONES=500
+NUM_BACKBONES=300
 SEQS_PER_BACKBONE=5
 MPNN_TEMP=0.2
 
@@ -152,7 +152,8 @@ echo "  $HOTSPOTS"
 echo
 
 REGIMES=(
-    "long|H1:7,H2:6,H3:10-16"
+    "short|H1:7,H2:6,H3:5-10"
+    "long|H1:7,H2:6,H3:11-15"
 )
 
 
@@ -281,8 +282,6 @@ for ITEM in "${REGIMES[@]}"; do
     report_duration "RFdiffusion ($NAME)" "$REGIME_START"
 
 done
-
-report_duration "Step 4 RFdiffusion" "$RFDIFFUSION_START"
 
 
 # ============================================================
