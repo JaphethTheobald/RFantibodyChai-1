@@ -15,7 +15,7 @@ set -euo pipefail
 
 RFAB="$HOME/RFantibody"
 
-BASE="$HOME/Documents/RFantibody_outputs/6i58_long_short_no_clash_with_light_chain_binding1_500_campaign"
+BASE="$HOME/Documents/RFantibody_outputs/6i58_long_light_chain_500_campaign"
 
 PREPDIR="$BASE/00_target"
 RFDIR="$BASE/04_rfdiffusion"
@@ -24,7 +24,7 @@ MPNNDIR="$BASE/05_mpnn"
 RF2DIR="$BASE/06_rf2"
 FINALDIR="$BASE/07_final_pdbs"
 
-TARGET="$PREPDIR/6i58_trunc_1h9.pdb"
+TARGET="$PREPDIR/6i58_trunc_LC_1h9.pdb"
 
 FRAMEWORK="$RFAB/scripts/examples/example_inputs/h-NbBCII10.pdb"
 
@@ -49,7 +49,7 @@ export DGLBACKEND=pytorch
 
 
 # GPU 2
-export CUDA_VISIBLE_DEVICES=GPU-589685a4-8d09-fe8d-b4d2-5268717630e0
+export CUDA_VISIBLE_DEVICES=0
 
 
 # ============================================================
@@ -60,14 +60,13 @@ NUM_BACKBONES=500
 SEQS_PER_BACKBONE=5
 MPNN_TEMP=0.2
 
-MINDIST_MAX=4.5
-AVERAGEMIN_MAX=100.0
+MINDIST_MAX=6
+AVERAGEMIN_MAX=10.0
 
-HOTSPOTS="A186,A187,A188,A189,A190,A191,A192" #NOW UPDATED (rm 181-185) to not interfere with the light chain of factor IX. In paper, 1h9 nanobody bound here
+HOTSPOTS="A187,A188,A189,A190,A191,A192" #In paper, 1h9 nanobody bound here
 
 REGIMES=(
     "long|H1:7,H2:6,H3:10-16"
-    "short|H1:7,H2:6,H3:5-10"
 )
 
 
@@ -164,7 +163,7 @@ with pdb.open() as f:
 
 bad = []
 
-for n in range(180, 191):
+for n in range(186, 191):
 
     r = residues.get(n)
 

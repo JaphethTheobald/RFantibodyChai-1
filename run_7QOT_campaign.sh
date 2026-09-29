@@ -2,10 +2,10 @@
 set -euo pipefail
 
 # ============================================================
-# 8OL9/ h-NbBCII10 CAMPAIGN
+# 7qot/ h-NbBCII10 CAMPAIGN
 #
 # RFdiffusion
-#   -> geometry filter
+#   -> RFD
 #   -> ProteinMPNN
 #   -> RF2
 #   -> scorefiles
@@ -14,7 +14,7 @@ set -euo pipefail
 
 RFAB="$HOME/RFantibody"
 
-TARGET="$HOME/RFantibody/7QOTalltrunc.pdb"
+TARGET="$HOME/RFantibody/7QOTA2A3trunc.pdb"
 FRAMEWORK="$RFAB/scripts/examples/example_inputs/h-NbBCII10.pdb"
 
 BASE="$HOME/Documents/RFantibody_outputs/7QOT_test_japhybinding_tworegimes_campaign"
@@ -60,21 +60,21 @@ export LD_LIBRARY_PATH="$HOME/.conda/envs/rfantibody-runtime/lib:${LD_LIBRARY_PA
 export DGLBACKEND=pytorch
 
 # gpu2
-export CUDA_VISIBLE_DEVICES=GPU-589685a4-8d09-fe8d-b4d2-5268717630e0
+export CUDA_VISIBLE_DEVICES=0
 
 # ============================================================
 # CAMPAIGN SETTINGS
 # ============================================================
 
-NUM_BACKBONES=50
+NUM_BACKBONES=500
 SEQS_PER_BACKBONE=5
 MPNN_TEMP=0.2
 
-MINDIST_MAX=4.5
-AVERAGEMIN_MAX=10.0
+MINDIST_MAX=6
+AVERAGEMIN_MAX=10
 
-HOTSPOTS="H224,H228,H229,H233,H253" #Japhybinding4 interactions with H196 H238 not well resolved on HK peptide, 
-HOTSPOTS2="H105,H107,H127,H151,H243" #Japhybinding5
+HOTSPOTS="A224,A228,A229,A233,A253" #Japhybinding4 interactions with H196 H238 not well resolved on HK peptide
+HOTSPOTS2="A105,A107,A127,A151,A243" #Japhybinding5
 FRAMEWORK2="$RFAB/scripts/examples/example_inputs/h-NbBCII10.pdb"
 TARGET2="$HOME/RFantibody/7QOTA2A3trunc.pdb"
 
@@ -82,8 +82,8 @@ TARGET2="$HOME/RFantibody/7QOTA2A3trunc.pdb"
 #   name|loops|base/framework PDB|target PDB|hotspots
 # The legacy name|loops format uses the global values above.
 REGIMES=(
-    "long|H1:7,H2:6,H3:10-16|$FRAMEWORK|$TARGET|$HOTSPOTS"
-    "long|H1:7,H2:6,H3:10-16|$FRAMEWORK2|$TARGET2|$HOTSPOTS2"
+    # "long|H1:7,H2:6,H3:10-16|$FRAMEWORK|$TARGET|$HOTSPOTS"
+    "a2a3|H1:7,H2:6,H3:10-16|$FRAMEWORK2|$TARGET2|$HOTSPOTS2"
 )
 
 

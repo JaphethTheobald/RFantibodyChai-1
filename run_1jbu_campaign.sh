@@ -14,11 +14,11 @@ set -euo pipefail
 
 RFAB="$HOME/RFantibody"
 
-TARGET="$HOME/RFantibody/1jbu_noX_rfantibody.pdb"
+TARGET="$HOME/RFantibody/1jbu_good_noLC.pdb"
 RESIDUE_MAP="$HOME/RFantibody/1jbu_residue_mapping.tsv"
 FRAMEWORK="$RFAB/scripts/examples/example_inputs/h-NbBCII10.pdb"
 
-BASE="$HOME/Documents/RFantibody_outputs/1jbu_short_500_campaign_japhybinding3"
+BASE="$HOME/Documents/RFantibody_outputs/1jbu_X_pocket_campaign_japhybinding3"
 
 RFDIR="$BASE/04_rfdiffusion"
 FILTERDIR="$BASE/04b_filtered"
@@ -61,22 +61,23 @@ export LD_LIBRARY_PATH="$HOME/.conda/envs/rfantibody-runtime/lib:${LD_LIBRARY_PA
 export DGLBACKEND=pytorch
 
 # Known-working A5000
-export CUDA_VISIBLE_DEVICES=0
+export CUDA_VISIBLE_DEVICES=1
 
 # ============================================================
 # CAMPAIGN SETTINGS
 # ============================================================
 
-NUM_BACKBONES=300
-SEQS_PER_BACKBONE=5
+NUM_BACKBONES=1000
+SEQS_PER_BACKBONE=10
 MPNN_TEMP=0.2
 
-MINDIST_MAX=4.5
-AVERAGEMIN_MAX=10.0
+MINDIST_MAX=10
+AVERAGEMIN_MAX=15
 
 # HOTSPOTS="H59,H61,H90,H94,H95,H96,H251,H253," #Glycol Binding
 # HOTSPOTS+="H20,H134,H135,H137,H184,H207" #Japhybinding1 interferes with TF...
-HOTSPOTS_ORIGINAL="H170,H170A,H184,H222,H225" #japhybinding3.1
+# HOTSPOTS_ORIGINAL="H170,H170A,H184,H222,H225" #japhybinding3.1
+HOTSPOTS_ORIGINAL="H64,H88"
 # ============================================================
 # TRANSLATE ORIGINAL PDB HOTSPOTS -> RFANTIBODY-SAFE NUMBERING
 # ============================================================
@@ -152,7 +153,6 @@ echo "  $HOTSPOTS"
 echo
 
 REGIMES=(
-    "short|H1:7,H2:6,H3:5-10"
     "long|H1:7,H2:6,H3:11-15"
 )
 

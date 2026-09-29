@@ -14,10 +14,10 @@ set -euo pipefail
 
 RFAB="$HOME/RFantibody"
 
-TARGET="$HOME/RFantibody/8OL9_trunc_clean_japhybinding1.pdb"
+TARGET="$HOME/RFantibody/8ol9_LC_clean.pdb"
 FRAMEWORK="$RFAB/scripts/examples/example_inputs/h-NbBCII10.pdb"
 
-BASE="$HOME/Documents/RFantibody_outputs/8OL9_test_campaign"
+BASE="$HOME/Documents/RFantibody_outputs/8OL9_testLC_campaign"
 
 RFDIR="$BASE/04_rfdiffusion"
 FILTERDIR="$BASE/04b_filtered"
@@ -66,18 +66,19 @@ export CUDA_VISIBLE_DEVICES=GPU-589685a4-8d09-fe8d-b4d2-5268717630e0
 # CAMPAIGN SETTINGS
 # ============================================================
 
-NUM_BACKBONES=2
-SEQS_PER_BACKBONE=2
+NUM_BACKBONES=300
+SEQS_PER_BACKBONE=10
 MPNN_TEMP=0.2
 
-MINDIST_MAX=4.5
-AVERAGEMIN_MAX=10.0
+MINDIST_MAX=6
+AVERAGEMIN_MAX=10
 
 # HOTSPOTS="H212,H215,H216,H217" #Imitates FaB in crystal structure
-HOTSPOTS="H212" #force helix
+HOTSPOTS="H204,H223" #hbinding1
+HOTSPOTS="H85,H185,H155"
 
 REGIMES=(
-    "long|H1:7,H2:6,H3:7-10"
+    "long|H1:7,H2:6,H3:10-16"
 )
 
 
