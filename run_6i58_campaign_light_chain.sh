@@ -23,8 +23,19 @@ FILTERDIR="$BASE/04b_filtered"
 MPNNDIR="$BASE/05_mpnn"
 RF2DIR="$BASE/06_rf2"
 FINALDIR="$BASE/07_final_pdbs"
+FINAL_FILTERDIR="$BASE/08_filtered_PDBs"
 
-TARGET="$PREPDIR/6i58_trunc_LC_1h9.pdb"
+# Final filtering configuration.
+FINAL_CDR_RMSD_MAX=2.05
+FINAL_ANTIBODY_RMSD_MAX=4
+FINAL_INTERACTION_PAE_MAX=10
+FINAL_DUPLICATE_MIN_COUNT=5
+FINAL_DUPLICATE_KEEP_COUNT=2
+FINAL_DUPLICATE_PAE_DELTA=3
+FINAL_DUPLICATE_COMPOSITE_DELTA=0.3
+FINAL_AFSERVER_BATCH_SIZE=30
+
+TARGET="$RFAB/6i58_trunc_LC_1h9.pdb"
 
 FRAMEWORK="$RFAB/scripts/examples/example_inputs/h-NbBCII10.pdb"
 
@@ -126,7 +137,7 @@ PY
 
 echo
 echo "============================================================"
-echo "Checking A180-A190"
+echo "Checking hotspot residues"
 echo "============================================================"
 
 TARGET="$TARGET" uv run python - <<'PY'
@@ -526,6 +537,25 @@ for ITEM in "${REGIMES[@]}"; do
     echo "$NAME: $(find "$OUTDIR" -maxdepth 1 -name '*.pdb' | wc -l) PDBs"
 
 done
+
+
+# ============================================================
+# STEP 8 — FILTER FINAL PDBS AND MAKE ALPHAFOLD SERVER JSON
+# ============================================================
+
+rm -rf "$FINAL_FILTERDIR"
+uv run python "$RFAB/scripts/filter_final_pdbs.py" \
+    "$RF2DIR" "$FINALDIR" "$FINAL_FILTERDIR" \
+    --cdr-rmsd-max "$FINAL_CDR_RMSD_MAX" \
+    --antibody-rmsd-max "$FINAL_ANTIBODY_RMSD_MAX" \
+    --interaction-pae-max "$FINAL_INTERACTION_PAE_MAX" \
+    --duplicate-min-count "$FINAL_DUPLICATE_MIN_COUNT" \
+    --duplicate-keep-count "$FINAL_DUPLICATE_KEEP_COUNT" \
+    --pae-delta "$FINAL_DUPLICATE_PAE_DELTA" \
+    --composite-delta "$FINAL_DUPLICATE_COMPOSITE_DELTA"
+uv run python "$RFAB/pdbs_to_afserver_json.py" \
+    "$FINAL_FILTERDIR" --output "$FINAL_FILTERDIR/alphafold_jobs.json" \
+    --batch-size "$FINAL_AFSERVER_BATCH_SIZE"
 
 
 # ============================================================

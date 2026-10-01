@@ -24,6 +24,17 @@ FILTERDIR="$BASE/04b_filtered"
 MPNNDIR="$BASE/05_mpnn"
 RF2DIR="$BASE/06_rf2"
 FINALDIR="$BASE/07_final_pdbs"
+FINAL_FILTERDIR="$BASE/08_filtered_PDBs"
+
+# Final filtering configuration.
+FINAL_CDR_RMSD_MAX=2.05
+FINAL_ANTIBODY_RMSD_MAX=4
+FINAL_INTERACTION_PAE_MAX=10
+FINAL_DUPLICATE_MIN_COUNT=4
+FINAL_DUPLICATE_KEEP_COUNT=2
+FINAL_DUPLICATE_PAE_DELTA=3
+FINAL_DUPLICATE_COMPOSITE_DELTA=0.3
+FINAL_AFSERVER_BATCH_SIZE=30
 
 SCRIPT_START="$(date +%s)"
 
@@ -66,12 +77,12 @@ export CUDA_VISIBLE_DEVICES=GPU-589685a4-8d09-fe8d-b4d2-5268717630e0
 # CAMPAIGN SETTINGS
 # ============================================================
 
-NUM_BACKBONES=500
+NUM_BACKBONES=1500
 SEQS_PER_BACKBONE=10
 MPNN_TEMP=0.2
 
 MINDIST_MAX=4.5
-AVERAGEMIN_MAX=10
+AVERAGEMIN_MAX=15
 
 HOTSPOTS="C72,C80" #dudesbidning
 
@@ -153,44 +164,44 @@ for ITEM in "${REGIMES[@]}"; do
     OUTQV="$RFDIR/${NAME}_rfdiffusion.qv"
     OUTSC="$RFDIR/${NAME}_rfdiffusion.sc"
 
-    echo
-    echo "------------------------------------------------------------"
-    echo "REGIME: $NAME"
-    echo "LOOPS:  $LOOPS"
-    echo "------------------------------------------------------------"
+    # echo
+    # echo "------------------------------------------------------------"
+    # echo "REGIME: $NAME"
+    # echo "LOOPS:  $LOOPS"
+    # echo "------------------------------------------------------------"
 
     REGIME_START="$(date +%s)"
 
     EXISTING="$(qv_count "$OUTQV")"
 
-    if [ "$EXISTING" -eq "$NUM_BACKBONES" ]; then
-        echo "RFdiffusion already complete: $EXISTING designs"
-    else
+    # if [ "$EXISTING" -eq "$NUM_BACKBONES" ]; then
+    #     echo "RFdiffusion already complete: $EXISTING designs"
+    # else
 
-        if [ -e "$OUTQV" ]; then
-            echo "Removing incomplete RFdiffusion output:"
-            echo "$OUTQV"
-            rm -f "$OUTQV"
-        fi
+    #     if [ -e "$OUTQV" ]; then
+    #         echo "Removing incomplete RFdiffusion output:"
+    #         echo "$OUTQV"
+    #         rm -f "$OUTQV"
+    #     fi
 
-        rm -f "$OUTSC"
+    #     rm -f "$OUTSC"
 
-        uv run rfdiffusion \
-            --target "$TARGET" \
-            --framework "$FRAMEWORK" \
-            --output-quiver "$OUTQV" \
-            --num-designs "$NUM_BACKBONES" \
-            --design-loops "$LOOPS" \
-            --hotspots "$HOTSPOTS"
+    #     uv run rfdiffusion \
+    #         --target "$TARGET" \
+    #         --framework "$FRAMEWORK" \
+    #         --output-quiver "$OUTQV" \
+    #         --num-designs "$NUM_BACKBONES" \
+    #         --design-loops "$LOOPS" \
+    #         --hotspots "$HOTSPOTS"
 
-        COUNT="$(qv_count "$OUTQV")"
+    #     COUNT="$(qv_count "$OUTQV")"
 
-        if [ "$COUNT" -ne "$NUM_BACKBONES" ]; then
-            echo "ERROR: Expected $NUM_BACKBONES RFdiffusion designs."
-            echo "Found: $COUNT"
-            exit 1
-        fi
-    fi
+    #     if [ "$COUNT" -ne "$NUM_BACKBONES" ]; then
+    #         echo "ERROR: Expected $NUM_BACKBONES RFdiffusion designs."
+    #         echo "Found: $COUNT"
+    #         exit 1
+    #     fi
+    # fi
 
     # qvscorefile creates sibling .sc itself.
     rm -f "$OUTSC"
@@ -563,6 +574,25 @@ for ITEM in "${REGIMES[@]}"; do
     report_duration "Extraction ($NAME)" "$REGIME_START"
 
 done
+
+
+# ============================================================
+# STEP 8 — FILTER FINAL PDBS AND MAKE ALPHAFOLD SERVER JSON
+# ============================================================
+
+rm -rf "$FINAL_FILTERDIR"
+uv run python "$RFAB/scripts/filter_final_pdbs.py" \
+    "$RF2DIR" "$FINALDIR" "$FINAL_FILTERDIR" \
+    --cdr-rmsd-max "$FINAL_CDR_RMSD_MAX" \
+    --antibody-rmsd-max "$FINAL_ANTIBODY_RMSD_MAX" \
+    --interaction-pae-max "$FINAL_INTERACTION_PAE_MAX" \
+    --duplicate-min-count "$FINAL_DUPLICATE_MIN_COUNT" \
+    --duplicate-keep-count "$FINAL_DUPLICATE_KEEP_COUNT" \
+    --pae-delta "$FINAL_DUPLICATE_PAE_DELTA" \
+    --composite-delta "$FINAL_DUPLICATE_COMPOSITE_DELTA"
+uv run python "$RFAB/pdbs_to_afserver_json.py" \
+    "$FINAL_FILTERDIR" --output "$FINAL_FILTERDIR/alphafold_jobs.json" \
+    --batch-size "$FINAL_AFSERVER_BATCH_SIZE"
 
 
 # ============================================================
