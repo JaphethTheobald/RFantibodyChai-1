@@ -35,7 +35,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--cdr-rmsd-max", type=float, default=2.05)
     parser.add_argument("--antibody-rmsd-max", type=float, default=4.0)
     parser.add_argument("--interaction-pae-max", type=float, default=10.0)
-    parser.add_argument("--duplicate-min-count", type=int, default=5)
+    parser.add_argument("--duplicate-min-count", type=int, default=4)
     parser.add_argument("--duplicate-keep-count", type=int, default=2)
     parser.add_argument("--pae-delta", type=float, default=3.0)
     parser.add_argument("--composite-delta", type=float, default=0.3)
