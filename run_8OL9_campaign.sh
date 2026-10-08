@@ -17,7 +17,7 @@ RFAB="$HOME/RFantibody"
 TARGET="$HOME/RFantibody/8ol9_LC_clean.pdb"
 FRAMEWORK="$RFAB/scripts/examples/example_inputs/h-NbBCII10.pdb"
 
-BASE="$HOME/Documents/RFantibody_outputs/8OL9_testLC_campaign"
+BASE="$HOME/Documents/RFantibody_outputs/8OL9_hydrophobic2"
 
 RFDIR="$BASE/04_rfdiffusion"
 FILTERDIR="$BASE/04b_filtered"
@@ -84,9 +84,9 @@ MPNN_TEMP=0.2
 MINDIST_MAX=6
 AVERAGEMIN_MAX=10
 
-# HOTSPOTS="H212,H215,H216,H217" #Imitates FaB in crystal structure
-# HOTSPOTS="H204,H223" #hbinding1
-HOTSPOTS="H85,H185,H155" #hydrophobicbinding2
+# HOTSPOTS="H212,H215,H216,H217" #Imitates FaB in crystal structure. later note: is this longbinidng? - yes
+HOTSPOTS="H204,H223" #hbinding1
+# HOTSPOTS="H85,H161,H155" #hydrophobicbinding2 yet to do
 
 REGIMES=(
     "long|H1:7,H2:6,H3:10-16"

@@ -84,7 +84,7 @@ MPNN_TEMP=0.2
 MINDIST_MAX=6
 AVERAGEMIN_MAX=10
 
-HOTSPOTS="A224,A228,A229,A233,A253" #Japhybinding4 interactions with H196 H238 not well resolved on HK peptide
+# HOTSPOTS="A224,A228,A229,A233,A253" #Japhybinding4 interactions with H196 H238 not well resolved on HK peptide
 HOTSPOTS2="A105,A107,A127,A151,A243" #Japhybinding5
 FRAMEWORK2="$RFAB/scripts/examples/example_inputs/h-NbBCII10.pdb"
 TARGET2="$HOME/RFantibody/7QOTA2A3trunc.pdb"
@@ -93,7 +93,7 @@ TARGET2="$HOME/RFantibody/7QOTA2A3trunc.pdb"
 #   name|loops|base/framework PDB|target PDB|hotspots
 # The legacy name|loops format uses the global values above.
 REGIMES=(
-    # "long|H1:7,H2:6,H3:10-16|$FRAMEWORK|$TARGET|$HOTSPOTS"
+    #"long|H1:7,H2:6,H3:10-16|$FRAMEWORK|$TARGET|$HOTSPOTS"
     "a2a3|H1:7,H2:6,H3:10-16|$FRAMEWORK2|$TARGET2|$HOTSPOTS2"
 )
 

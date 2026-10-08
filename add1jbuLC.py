@@ -19,7 +19,7 @@ from pathlib import Path
 
 
 # ---------------------------- EDIT THESE VALUES ----------------------------
-INPUT_DIRECTORY = Path("/home/schrogpu/Documents/RFantibody_outputs/Best/f7_1jbu/1jbu_long_short_500_campaign_japhybinding3")
+INPUT_DIRECTORY = Path("/home/schrogpu/Documents/RFantibody_outputs/Best/f7_1jbu/A183mimic")
 OUTPUT_DIRECTORY = INPUT_DIRECTORY.with_name(INPUT_DIRECTORY.name + "_split_tail_chain")
 
 SEQUENCE_TO_SPLIT = "ICVNENGGCEQYCSDHTGTKRSCRCHEGYSLLADGVSCTPTVEYPCGKIPILEK"

@@ -7,8 +7,8 @@ Interactive mode:
     python3 pdb_to_afserver_template.py
 
 Command-line mode:
-    python3 pdb_to_afserver_template.py my_structure.pdb \
-        --chain A --query-fasta target.fasta --out-dir af_template
+    python3 pdb_to_afserver_template.py ./1jbu_noX_rfantibody.pdb \
+        --chain H --query-fasta KVCPKGECPWQVLLLVNGAQLCGGTLINTIWVVSAAHCFDKIKNWRNLIAVLGEHDHDGDEQSRRVAQVIIPSTYVPGTTNHDIALLRLHQPVVLTDHVVPLCLPERTFSERTLAFVRFSLVSGWTALELMVLNVPRLMTQDCLQQSRKVGDSPNITEYMFCAGYSDGSKDSCKGDSGGPHATHYRGTWYLTGIVSWGQGCATVGHFGVYTRVSQYIEWLQKLMRSEPRPGVLLRAPFP --out-dir af_template
 
 The output mmCIF contains exactly one cleaned protein chain.  The mapping JSON
 uses the AlphaFold Server format: 0-based queryIndices and templateIndices.
