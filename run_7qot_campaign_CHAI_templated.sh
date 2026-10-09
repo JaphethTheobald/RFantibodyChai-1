@@ -2,41 +2,57 @@
 set -euo pipefail
 
 # ============================================================
-# 1JBU noX / h-NbBCII10 H3-LENGTH CAMPAIGN
+# 7QOT / h-NbBCII10 / Chai-1 campaign
 #
-# RFdiffusion
-#   -> geometry filter
-#   -> ProteinMPNN
-#   -> Chai-1
-#   -> scorefiles
-#   -> final PDB extraction
+# Pipeline: RFdiffusion -> geometry filter -> ProteinMPNN -> Chai-1
+#           -> final filtering -> AlphaFold Server JSON
+#
+# Chai validation uses a target-only structural template made from
+# 7qot_untrunc.pdb.  The target is conditioned on that experimental
+# conformation; the VHH remains untemplated and there are no complex/contact
+# restraints.
+#
+# Edit this block for a new campaign. Everything below it is derived from
+# these settings or implements the pipeline.
 # ============================================================
 
+# Paths
 RFAB="$HOME/RFantibody"
-BASE="$HOME/Documents/RFantibody_outputs/7qot_chaiversion"
+BASE="$HOME/Documents/RFantibody_outputs/7qot_chai_templated2"
+FRAMEWORK="$RFAB/scripts/examples/example_inputs/h-NbBCII10.pdb"
+TARGET="$RFAB/7QOTA2A3trunc.pdb"
+FULL_TARGET_FASTA="$RFAB/7qota2a3trunc.fasta"
+TARGET_TEMPLATE_PDB="$RFAB/7QOTA2A3trunc.pdb"
+TARGET_TEMPLATE_CIF_GZ="$RFAB/chai_templates/7QOTA2A3trunc_chain_A_template.cif.gz"
 
-RFDIR="$BASE/04_rfdiffusion"
-FILTERDIR="$BASE/04b_filtered"
-MPNNDIR="$BASE/05_mpnn"
-CHAIDIR="$BASE/06_chai"
-FINALDIR="$BASE/07_final_pdbs"
-FINAL_FILTERDIR="$BASE/08_filtered_PDBs"
+# RFdiffusion and ProteinMPNN
+NUM_BACKBONES=1000
+SEQS_PER_BACKBONE=5
+MPNN_TEMP=0.2
+MINDIST_MAX=6
+AVERAGEMIN_MAX=10
 
-# Chai-1 is deliberately isolated from RFantibody's uv environment.  This
-# avoids replacing the tested RFantibody torch/DGL stack.
+# Regime format: name|loops|framework PDB|target PDB|hotspots
+HOTSPOTS="A105,A107,A127,A151,A243"
+REGIMES=(
+    "a2a3|H1:7,H2:6,H3:10-16|$FRAMEWORK|$TARGET|$HOTSPOTS"
+)
+
+# Chai-1 uses a separate environment from RFantibody's uv environment.
 CHAI_PYTHON="$RFAB/.chai-venv/bin/python"
-CHAI_VALIDATOR="$RFAB/scripts/chai_validate_campaign.py"
+CHAI_VALIDATOR="$RFAB/scripts/chai_validate_campaign_templated.py"
 CHAI_DOWNLOADS_DIR="$RFAB/.chai-downloads"
-
-CHAI_NUM_SAMPLES=5
+KALIGN_ENV="$RFAB/.kalign-env"
+CHAI_TEMPLATE_WORKDIR="$BASE/chai_target_template_7qotuntrunc"
+CHAI_TEMPLATE_IDENTIFIER="7QOTUNTRUNC"
+CHAI_TEMPLATE_TARGET_NAME="T"
+CHAI_NUM_SAMPLES=3
 CHAI_RECYCLES=3
 CHAI_TIMESTEPS=200
 CHAI_SEED=20261007
 
-# Final filtering configuration.
-# Start with the legacy gate for the calibration batch; reset this only after
-# inspecting the Chai score distribution and recovered A-183-groove poses.
-FINAL_CDR_RMSD_MAX=2.05
+# Final filtering and AlphaFold Server output
+FINAL_CDR_RMSD_MAX=3
 FINAL_ANTIBODY_RMSD_MAX=4
 FINAL_INTERACTION_PAE_MAX=10
 FINAL_DUPLICATE_MIN_COUNT=4
@@ -44,6 +60,23 @@ FINAL_DUPLICATE_KEEP_COUNT=2
 FINAL_DUPLICATE_PAE_DELTA=3
 FINAL_DUPLICATE_COMPOSITE_DELTA=0.3
 FINAL_AFSERVER_BATCH_SIZE=30
+KEEP_GEOMETRY_FILTER_PDBS=false
+KEEP_FINAL_PDBS=false
+
+# Environment
+export CUDA_VISIBLE_DEVICES=1
+
+# Derived output paths
+RFDIR="$BASE/04_rfdiffusion"
+FILTERDIR="$BASE/04b_filtered"
+MPNNDIR="$BASE/05_mpnn"
+# Keep template-conditioned predictions separate from the prior blind Chai
+# results.  This prevents --resume from treating an old blind result as a
+# templated prediction.
+CHAIDIR="$BASE/06_chai_target_template"
+FINALDIR="$BASE/07_final_pdbs_target_template"
+FINAL_FILTERDIR="$BASE/08_filtered_PDBs_target_template"
+COMPLETE_DIR="$BASE/.complete"
 
 SCRIPT_START="$(date +%s)"
 
@@ -67,52 +100,23 @@ mkdir -p \
     "$FILTERDIR" \
     "$MPNNDIR" \
     "$CHAIDIR" \
-    "$FINALDIR"
+    "$FINALDIR" \
+    "$COMPLETE_DIR"
+
+shopt -s nullglob
+EXISTING_RFDIFFUSION_QVS=("$RFDIR"/*.qv)
+# if [ "${#EXISTING_RFDIFFUSION_QVS[@]}" -gt 0 ]; then
+#     echo "ERROR: RFdiffusion .qv file(s) already exist in $RFDIR."
+#     printf 'Refusing to run without deleting: %s\n' "${EXISTING_RFDIFFUSION_QVS[@]}"
+#     exit 1
+# fi
+shopt -u nullglob
 
 cd "$RFAB"
 
-# ============================================================
-# ENVIRONMENT
-# ============================================================
-
-export PATH="$HOME/.local/bin:$PATH"
+export PATH="$KALIGN_ENV/bin:$HOME/.local/bin:$PATH"
 export LD_LIBRARY_PATH="$HOME/.conda/envs/rfantibody-runtime/lib:${LD_LIBRARY_PATH:-}"
 export DGLBACKEND=pytorch
-
-export CUDA_VISIBLE_DEVICES=1
-
-# ============================================================
-# CAMPAIGN SETTINGS
-# ============================================================
-
-NUM_BACKBONES=2
-SEQS_PER_BACKBONE=1
-MPNN_TEMP=0.2
-
-MINDIST_MAX=6
-AVERAGEMIN_MAX=10
-
-# HOTSPOTS="A224,A228,A229,A233,A253" #Japhybinding4 interactions with H196 H238 not well resolved on HK peptide
-HOTSPOTS="A105,A107,A127,A151,A243" #Japhybinding5
-FRAMEWORK="$RFAB/scripts/examples/example_inputs/h-NbBCII10.pdb"
-TARGET="$HOME/RFantibody/7QOTA2A3trunc.pdb"
-FULL_TARGET_FASTA="$HOME/RFantibody/7qota2a3trunc.fasta"
-
-# Regime format:
-#   name|loops|base/framework PDB|target PDB|hotspots
-# The legacy name|loops format uses the global values above.
-REGIMES=(
-    #"long|H1:7,H2:6,H3:10-16|$FRAMEWORK|$TARGET|$HOTSPOTS"
-    "a2a3|H1:7,H2:6,H3:10-16|$FRAMEWORK|$TARGET|$HOTSPOTS"
-)
-# ============================================================
-# TRANSLATE ORIGINAL PDB HOTSPOTS -> RFANTIBODY-SAFE NUMBERING
-# ============================================================
-
-
-# ============================================================
-# BASIC CHECKS
-# ============================================================
 
 PREFLIGHT_START="$(date +%s)"
 
@@ -134,9 +138,20 @@ if [ ! -s "$FRAMEWORK" ]; then
 fi
 
 if [ ! -s "$FULL_TARGET_FASTA" ]; then
-    echo "ERROR: Full mature FVII-zymogen FASTA not found:"
+    echo "ERROR: Full mature 7QOT target FASTA not found:"
     echo "$FULL_TARGET_FASTA"
-    echo "Create this once before the campaign; do not use the 1JBU fragment."
+    exit 1
+fi
+
+if [ ! -s "$TARGET_TEMPLATE_PDB" ]; then
+    echo "ERROR: Target-only Chai template PDB not found:"
+    echo "$TARGET_TEMPLATE_PDB"
+    exit 1
+fi
+
+if [ ! -s "$TARGET_TEMPLATE_CIF_GZ" ]; then
+    echo "ERROR: Prepared Chai template CIF not found:"
+    echo "$TARGET_TEMPLATE_CIF_GZ"
     exit 1
 fi
 
@@ -150,6 +165,12 @@ fi
 if [ ! -s "$CHAI_VALIDATOR" ]; then
     echo "ERROR: Chai campaign validator not found:"
     echo "$CHAI_VALIDATOR"
+    exit 1
+fi
+
+if ! command -v kalign >/dev/null 2>&1; then
+    echo "ERROR: Kalign executable not found in PATH."
+    echo "Expected: $KALIGN_ENV/bin/kalign"
     exit 1
 fi
 
@@ -171,8 +192,6 @@ import chai_lab
 import torch
 
 print("Chai:", getattr(chai_lab, "__version__", "installed"))
-print("CUDA available:", torch.cuda.is_available())
-print("GPU:", torch.cuda.get_device_name(0) if torch.cuda.is_available() else "none")
 print("bfloat16 supported:", torch.cuda.is_bf16_supported() if torch.cuda.is_available() else False)
 
 if not torch.cuda.is_available() or not torch.cuda.is_bf16_supported():
@@ -215,6 +234,7 @@ for ITEM in "${REGIMES[@]}"; do
 
     OUTQV="$RFDIR/${NAME}_rfdiffusion.qv"
     OUTSC="$RFDIR/${NAME}_rfdiffusion.sc"
+    RF_MARKER="$COMPLETE_DIR/${NAME}_rfdiffusion.complete"
 
     echo
     echo "------------------------------------------------------------"
@@ -226,7 +246,7 @@ for ITEM in "${REGIMES[@]}"; do
 
     EXISTING="$(qv_count "$OUTQV")"
 
-    if [ "$EXISTING" -eq "$NUM_BACKBONES" ]; then
+    if [ "$EXISTING" -eq "$NUM_BACKBONES" ] && [ -s "$OUTSC" ]; then
         echo "RFdiffusion already complete: $EXISTING designs"
     else
 
@@ -253,17 +273,16 @@ for ITEM in "${REGIMES[@]}"; do
             echo "Found: $COUNT"
             exit 1
         fi
+        rm -f "$OUTSC"
+        uv run qvscorefile "$OUTQV"
     fi
-
-    # qvscorefile creates sibling .sc itself.
-    rm -f "$OUTSC"
-    uv run qvscorefile "$OUTQV"
 
     if [ ! -s "$OUTSC" ]; then
         echo "ERROR: RFdiffusion scorefile was not created:"
         echo "$OUTSC"
         exit 1
     fi
+    touch "$RF_MARKER"
 
     report_duration "RFdiffusion ($NAME)" "$REGIME_START"
 
@@ -293,6 +312,13 @@ for ITEM in "${REGIMES[@]}"; do
     FILTERED_QV="$FILTERDIR/${NAME}_filtered.qv"
     SUMMARY="$FILTERDIR/${NAME}_filter_summary.tsv"
     TEMPDIR="$FILTERDIR/${NAME}_temp_pdbs"
+    GEOMETRY_MARKER="$COMPLETE_DIR/${NAME}_geometry_filter.complete"
+
+    if [ -s "$SUMMARY" ] \
+        && { [ -s "$FILTERED_QV" ] || [ -f "$GEOMETRY_MARKER" ]; }; then
+        echo "Geometry filtering already complete: $NAME"
+        continue
+    fi
 
     echo
     echo "------------------------------------------------------------"
@@ -374,14 +400,6 @@ for pdb in tempdir.glob("*.pdb"):
         pdb.unlink()
 
 print(f"Passed {len(passing)}/{len(rows)} designs")
-
-for tag, mindist, averagemin, passed in rows:
-    if passed:
-        print(
-            f" PASS {tag:25s} "
-            f"mindist={mindist:.2f} "
-            f"averagemin={averagemin:.2f}"
-        )
 PY
 
     PASS_COUNT="$(find "$TEMPDIR" -maxdepth 1 -name '*.pdb' | wc -l)"
@@ -394,6 +412,7 @@ PY
     if [ "$PASS_COUNT" -eq 0 ]; then
         echo "WARNING: No passing backbones for $NAME."
         echo "Skipping ProteinMPNN/Chai-1 for this regime."
+        touch "$GEOMETRY_MARKER"
         report_duration "Filtering ($NAME)" "$REGIME_START"
         continue
     fi
@@ -412,7 +431,12 @@ PY
         exit 1
     fi
 
+    if [ "$KEEP_GEOMETRY_FILTER_PDBS" != true ]; then
+        rm -rf "$TEMPDIR"
+    fi
+
     echo "Filtered Quiver contains $CREATED backbones."
+    touch "$GEOMETRY_MARKER"
 
     report_duration "Filtering ($NAME)" "$REGIME_START"
 
@@ -438,11 +462,6 @@ for ITEM in "${REGIMES[@]}"; do
 
     INPUT="$FILTERDIR/${NAME}_filtered.qv"
     OUTPUT="$MPNNDIR/${NAME}_mpnn.qv"
-
-    echo
-    echo "------------------------------------------------------------"
-    echo "ProteinMPNN: $NAME"
-    echo "------------------------------------------------------------"
 
     REGIME_START="$(date +%s)"
 
@@ -500,6 +519,15 @@ report_duration "Step 5 ProteinMPNN" "$MPNN_START"
 
 
 # ============================================================
+# CLEAN RFdiffusion FILES TO SAVE STORAGE
+# ============================================================
+
+echo "Removing RFdiffusion artifacts after ProteinMPNN."
+rm -rf "$RFDIR"
+mkdir -p "$RFDIR"
+
+
+# ============================================================
 # STEP 6 — CHAI-1 VALIDATION
 # ============================================================
 
@@ -521,11 +549,6 @@ for ITEM in "${REGIMES[@]}"; do
     DETAILS="$CHAIDIR/${NAME}_chai_details.tsv"
     OUTDIR="$FINALDIR/$NAME"
 
-    echo
-    echo "------------------------------------------------------------"
-    echo "Chai-1: $NAME"
-    echo "------------------------------------------------------------"
-
     REGIME_START="$(date +%s)"
 
     if [ ! -s "$INPUT" ]; then
@@ -544,13 +567,13 @@ for ITEM in "${REGIMES[@]}"; do
         EXISTING=0
     fi
 
-    echo "debugggg2"
 
-    if [ "$EXISTING" -eq "$EXPECTED" ]; then
+    if [ "$EXISTING" -eq "$EXPECTED" ] \
+        && [ -s "$SCORE" ] \
+        && [ -s "$DETAILS" ]; then
         echo "Chai-1 already complete:"
         echo "$EXISTING predictions"
     else
-        echo "debugggg"
         if [ ! -d "$INPUT_PDBDIR" ] || [ "$(find "$INPUT_PDBDIR" -maxdepth 1 -name '*.pdb' | wc -l)" -ne "$EXPECTED" ]; then
             rm -rf "$INPUT_PDBDIR"
             mkdir -p "$INPUT_PDBDIR"
@@ -565,6 +588,12 @@ for ITEM in "${REGIMES[@]}"; do
         "$CHAI_PYTHON" "$CHAI_VALIDATOR" \
             --input-pdb-dir "$INPUT_PDBDIR" \
             --full-target-fasta "$FULL_TARGET_FASTA" \
+            --template-pdb "$TARGET_TEMPLATE_PDB" \
+            --template-cif-gz "$TARGET_TEMPLATE_CIF_GZ" \
+            --template-target-fasta "$FULL_TARGET_FASTA" \
+            --template-work-dir "$CHAI_TEMPLATE_WORKDIR" \
+            --template-identifier "$CHAI_TEMPLATE_IDENTIFIER" \
+            --template-target-name "$CHAI_TEMPLATE_TARGET_NAME" \
             --raw-output-dir "$RAW_OUTPUT" \
             --pdb-output-dir "$OUTDIR" \
             --scorefile "$SCORE" \
@@ -591,6 +620,7 @@ for ITEM in "${REGIMES[@]}"; do
         echo "$SCORE"
         exit 1
     fi
+    touch "$COMPLETE_DIR/${NAME}_chai.complete"
 
     report_duration "Chai-1 ($NAME)" "$REGIME_START"
 
@@ -600,62 +630,30 @@ report_duration "Step 6 Chai-1 validation" "$CHAI_START"
 
 
 # ============================================================
-# STEP 7 — VERIFY CHAI PDBS
+# STEP 7 — FILTER FINAL PDBS AND MAKE ALPHAFOLD SERVER JSON
 # ============================================================
 
-echo
-echo "============================================================"
-echo "STEP 7: Verify Chai structures"
-echo "============================================================"
-
-EXTRACT_START="$(date +%s)"
-
-for ITEM in "${REGIMES[@]}"; do
-
-    NAME="${ITEM%%|*}"
-
-    OUTDIR="$FINALDIR/$NAME"
-
-    if [ ! -d "$OUTDIR" ]; then
-        echo "No Chai output for $NAME. Skipping."
-        continue
-    fi
-
-    echo
-    echo "------------------------------------------------------------"
-    echo "Verifying: $NAME"
-    echo "------------------------------------------------------------"
-
-    REGIME_START="$(date +%s)"
-
-    COUNT="$(find "$OUTDIR" -maxdepth 1 -name '*.pdb' | wc -l)"
-
-    echo "Found $COUNT Chai PDBs."
-
-    report_duration "Chai verification ($NAME)" "$REGIME_START"
-
-done
-
-report_duration "Step 7 Chai verification" "$EXTRACT_START"
-
-
-# ============================================================
-# STEP 8 — FILTER FINAL PDBS AND MAKE ALPHAFOLD SERVER JSON
-# ============================================================
-
-rm -rf "$FINAL_FILTERDIR"
-uv run python "$RFAB/scripts/filter_final_pdbs.py" \
-    "$CHAIDIR" "$FINALDIR" "$FINAL_FILTERDIR" \
-    --cdr-rmsd-max "$FINAL_CDR_RMSD_MAX" \
-    --antibody-rmsd-max "$FINAL_ANTIBODY_RMSD_MAX" \
-    --interaction-pae-max "$FINAL_INTERACTION_PAE_MAX" \
-    --duplicate-min-count "$FINAL_DUPLICATE_MIN_COUNT" \
-    --duplicate-keep-count "$FINAL_DUPLICATE_KEEP_COUNT" \
-    --pae-delta "$FINAL_DUPLICATE_PAE_DELTA" \
-    --composite-delta "$FINAL_DUPLICATE_COMPOSITE_DELTA"
-uv run python "$RFAB/pdbs_to_afserver_json.py" \
-    "$FINAL_FILTERDIR" --output "$FINAL_FILTERDIR/alphafold_jobs.json" \
-    --batch-size "$FINAL_AFSERVER_BATCH_SIZE"
+FINAL_MARKER="$COMPLETE_DIR/final_filter_and_afserver.complete"
+if [ -f "$FINAL_MARKER" ] \
+    && [ -s "$FINAL_FILTERDIR/filter_report.tsv" ] \
+    && find "$FINAL_FILTERDIR" -maxdepth 1 -name 'alphafold_jobs*.json' -print -quit | grep -q .; then
+    echo "Final filtering and AlphaFold Server JSON already complete."
+else
+    rm -rf "$FINAL_FILTERDIR"
+    uv run python "$RFAB/scripts/filter_final_pdbs.py" \
+        "$CHAIDIR" "$FINALDIR" "$FINAL_FILTERDIR" \
+        --cdr-rmsd-max "$FINAL_CDR_RMSD_MAX" \
+        --antibody-rmsd-max "$FINAL_ANTIBODY_RMSD_MAX" \
+        --interaction-pae-max "$FINAL_INTERACTION_PAE_MAX" \
+        --duplicate-min-count "$FINAL_DUPLICATE_MIN_COUNT" \
+        --duplicate-keep-count "$FINAL_DUPLICATE_KEEP_COUNT" \
+        --pae-delta "$FINAL_DUPLICATE_PAE_DELTA" \
+        --composite-delta "$FINAL_DUPLICATE_COMPOSITE_DELTA"
+    uv run python "$RFAB/pdbs_to_afserver_json.py" \
+        "$FINAL_FILTERDIR" --output "$FINAL_FILTERDIR/alphafold_jobs.json" \
+        --batch-size "$FINAL_AFSERVER_BATCH_SIZE"
+    touch "$FINAL_MARKER"
+fi
 
 
 # ============================================================
@@ -697,5 +695,10 @@ find "$CHAIDIR" -maxdepth 1 -name '*_rf2.sc' -print | sort
 echo
 echo "Final Chai PDBs:"
 echo "$FINALDIR"
+
+if [ "$KEEP_FINAL_PDBS" != true ]; then
+    rm -rf "$FINALDIR"
+    echo "Removed final PDBs to save storage."
+fi
 
 report_duration "Total campaign" "$SCRIPT_START"

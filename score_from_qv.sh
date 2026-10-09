@@ -2,7 +2,7 @@
 set -euo pipefail
 
 RFAB="$HOME/RFantibody"
-RF2DIR="$HOME/Documents/RFantibody_outputs/1jbu_500_campaign_japhybinding3/06_rf2"
+RF2DIR="/home/schrogpu/Documents/RFantibody_outputs/12bn_campaign/06_rf2"
 
 cd "$RFAB"
 

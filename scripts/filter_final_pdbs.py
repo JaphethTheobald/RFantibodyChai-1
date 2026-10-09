@@ -32,7 +32,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("score_dir", type=Path, help="Directory containing RF2 .sc files")
     parser.add_argument("pdb_dir", type=Path, help="Directory containing final PDBs")
     parser.add_argument("output_dir", type=Path, help="Directory for filtered PDBs")
-    parser.add_argument("--cdr-rmsd-max", type=float, default=2.05)
+    parser.add_argument("--cdr-rmsd-max", type=float, default=3.0)
     parser.add_argument("--antibody-rmsd-max", type=float, default=4.0)
     parser.add_argument("--interaction-pae-max", type=float, default=10.0)
     parser.add_argument("--duplicate-min-count", type=int, default=4)
@@ -83,10 +83,10 @@ def read_designs(scorefiles: list[Path], args: argparse.Namespace) -> list[Desig
 
 
 def backbone_id(tag: str) -> str:
-    match = re.fullmatch(r"samples_design_(\d+)_dldesign_\d+_best", tag)
+    match = re.fullmatch(r"samples_design_(\d+)_dldesign_\d+(?:_best)?", tag)
     if not match:
         raise ValueError(
-            f"Tag does not match samples_design_AAAAA_dldesign_BBBBB_best: {tag}"
+            f"Tag does not match samples_design_AAAAA_dldesign_BBBBB[_best]: {tag}"
         )
     return match.group(1)
 

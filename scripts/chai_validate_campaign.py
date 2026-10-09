@@ -156,6 +156,13 @@ def ranking_value(ranking: Any, field: str, default: float = math.nan) -> float:
         return default
 
 
+def model_score_value(score_file: Path, field: str) -> float:
+    with np.load(score_file, allow_pickle=False) as scores:
+        if field not in scores.files:
+            raise ValueError(f"{score_file} is missing Chai score {field!r}")
+        return scalar(scores[field])
+
+
 def score_candidate(
     ref_t_seq: str, ref_t_ca: list[np.ndarray | None], ref_h_seq: str, ref_h_ca: list[np.ndarray | None],
     pred_t_seq: str, pred_t_ca: list[np.ndarray | None], pred_h_seq: str, pred_h_ca: list[np.ndarray | None],
@@ -263,13 +270,17 @@ def one_design(
     np.savez_compressed(result_path.parent / "chai_tensors.npz", pae=pae_all, plddt=plddt_all)
     sample_rows: list[dict[str, Any]] = []
     for index, (cif, ranking) in enumerate(zip(candidates.cif_paths, candidates.ranking_data, strict=True)):
+        model_scores = result_path.parent / f"scores.model_idx_{index}.npz"
+        if not model_scores.is_file():
+            raise FileNotFoundError(f"Chai score file not found: {model_scores}")
         pred_t_seq, pred_t_ca, pred_h_seq, pred_h_ca, structure = candidate_chains(Path(cif))
         legacy = score_candidate(ref_t_seq, ref_t_ca, ref_h_seq, ref_h_ca, pred_t_seq, pred_t_ca, pred_h_seq, pred_h_ca, cdrs, pae_all[index], plddt_all[index], len(target_sequence))
         legacy["tag"] = tag
         sample_rows.append({
             "model_index": index, "cif": str(cif), "legacy": legacy,
             "aggregate_score": ranking_value(ranking, "aggregate_score"),
-            "ptm": ranking_value(ranking, "ptm"), "iptm": ranking_value(ranking, "iptm"),
+            "ptm": model_score_value(model_scores, "ptm"),
+            "iptm": model_score_value(model_scores, "iptm"),
             "has_inter_chain_clashes": bool(getattr(ranking, "has_inter_chain_clashes", False)),
         })
     chosen = min(sample_rows, key=lambda row: (

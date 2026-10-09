@@ -15,7 +15,7 @@ set -euo pipefail
 
 RFAB="$HOME/RFantibody"
 
-BASE="$HOME/Documents/RFantibody_outputs/6i58_long_light_chain_500_campaign"
+BASE="$HOME/Documents/RFantibody_outputs/6i58_campaign"
 
 PREPDIR="$BASE/00_target"
 RFDIR="$BASE/04_rfdiffusion"
@@ -26,16 +26,18 @@ FINALDIR="$BASE/07_final_pdbs"
 FINAL_FILTERDIR="$BASE/08_filtered_PDBs"
 
 # Final filtering configuration.
-FINAL_CDR_RMSD_MAX=2.05
+FINAL_CDR_RMSD_MAX=3
 FINAL_ANTIBODY_RMSD_MAX=4
 FINAL_INTERACTION_PAE_MAX=10
 FINAL_DUPLICATE_MIN_COUNT=4
 FINAL_DUPLICATE_KEEP_COUNT=2
-FINAL_DUPLICATE_PAE_DELTA=3
+FINAL_DUPLICATE_PAE_DELTA=4
 FINAL_DUPLICATE_COMPOSITE_DELTA=0.3
 FINAL_AFSERVER_BATCH_SIZE=30
+KEEP_GEOMETRY_FILTER_PDBS=false
+KEEP_FINAL_PDBS=false
 
-TARGET="$RFAB/6i58_trunc_LC_1h9.pdb"
+TARGET="$RFAB/6i58_a3.pdb"
 
 FRAMEWORK="$RFAB/scripts/examples/example_inputs/h-NbBCII10.pdb"
 
@@ -67,14 +69,14 @@ export CUDA_VISIBLE_DEVICES=0
 # CAMPAIGN SETTINGS
 # ============================================================
 
-NUM_BACKBONES=500
+NUM_BACKBONES=100
 SEQS_PER_BACKBONE=5
 MPNN_TEMP=0.2
 
 MINDIST_MAX=6
 AVERAGEMIN_MAX=10.0
 
-HOTSPOTS="A187,A188,A189,A190,A191,A192" #In paper, 1h9 nanobody bound here
+HOTSPOTS="A187,A260" #In paper, 1h9 nanobody bound here
 
 REGIMES=(
     "long|H1:7,H2:6,H3:10-16"
@@ -402,6 +404,10 @@ PY
         exit 1
     fi
 
+    if [ "$KEEP_GEOMETRY_FILTER_PDBS" != true ]; then
+        rm -rf "$TEMPDIR"
+    fi
+
 done
 
 
@@ -451,6 +457,15 @@ for ITEM in "${REGIMES[@]}"; do
     echo "$NAME ProteinMPNN: $(qv_count "$OUTPUT") sequences"
 
 done
+
+
+# ============================================================
+# CLEAN RFdiffusion FILES TO SAVE STORAGE
+# ============================================================
+
+echo "Removing RFdiffusion artifacts after ProteinMPNN."
+rm -rf "$RFDIR"
+mkdir -p "$RFDIR"
 
 
 # ============================================================
@@ -597,3 +612,8 @@ echo "$TARGET"
 echo
 echo "RF2 scorefiles:"
 find "$RF2DIR" -maxdepth 1 -name '*_rf2.sc' -print | sort
+
+if [ "$KEEP_FINAL_PDBS" != true ]; then
+    rm -rf "$FINALDIR"
+    echo "Removed final PDBs to save storage."
+fi

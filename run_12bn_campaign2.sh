@@ -26,7 +26,7 @@ FINALDIR="$BASE/07_final_pdbs"
 FINAL_FILTERDIR="$BASE/08_filtered_PDBs"
 
 # Final filtering configuration.
-FINAL_CDR_RMSD_MAX=2.05
+FINAL_CDR_RMSD_MAX=3
 FINAL_ANTIBODY_RMSD_MAX=4
 FINAL_INTERACTION_PAE_MAX=10
 FINAL_DUPLICATE_MIN_COUNT=4
@@ -34,6 +34,8 @@ FINAL_DUPLICATE_KEEP_COUNT=2
 FINAL_DUPLICATE_PAE_DELTA=3
 FINAL_DUPLICATE_COMPOSITE_DELTA=0.3
 FINAL_AFSERVER_BATCH_SIZE=30
+KEEP_GEOMETRY_FILTER_PDBS=false
+KEEP_FINAL_PDBS=false
 
 TARGET="$RFAB/12bn_clean_trunc.pdb"
 
@@ -46,6 +48,15 @@ mkdir -p \
     "$MPNNDIR" \
     "$RF2DIR" \
     "$FINALDIR"
+
+shopt -s nullglob
+EXISTING_RFDIFFUSION_QVS=("$RFDIR"/*.qv)
+if [ "${#EXISTING_RFDIFFUSION_QVS[@]}" -gt 0 ]; then
+    echo "ERROR: RFdiffusion .qv file(s) already exist in $RFDIR."
+    printf 'Refusing to run without deleting: %s\n' "${EXISTING_RFDIFFUSION_QVS[@]}"
+    exit 1
+fi
+shopt -u nullglob
 
 cd "$RFAB"
 
@@ -402,6 +413,10 @@ PY
         exit 1
     fi
 
+    if [ "$KEEP_GEOMETRY_FILTER_PDBS" != true ]; then
+        rm -rf "$TEMPDIR"
+    fi
+
 done
 
 
@@ -451,6 +466,15 @@ for ITEM in "${REGIMES[@]}"; do
     echo "$NAME ProteinMPNN: $(qv_count "$OUTPUT") sequences"
 
 done
+
+
+# ============================================================
+# CLEAN RFdiffusion FILES TO SAVE STORAGE
+# ============================================================
+
+echo "Removing RFdiffusion artifacts after ProteinMPNN."
+rm -rf "$RFDIR"
+mkdir -p "$RFDIR"
 
 
 # ============================================================
@@ -597,3 +621,8 @@ echo "$TARGET"
 echo
 echo "RF2 scorefiles:"
 find "$RF2DIR" -maxdepth 1 -name '*_rf2.sc' -print | sort
+
+if [ "$KEEP_FINAL_PDBS" != true ]; then
+    rm -rf "$FINALDIR"
+    echo "Removed final PDBs to save storage."
+fi
