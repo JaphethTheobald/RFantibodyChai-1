@@ -20,10 +20,10 @@ set -euo pipefail
 RFAB="$HOME/RFantibody"
 BASE="$HOME/Documents/RFantibody_outputs/6i58_campaign_1500"
 FRAMEWORK="$RFAB/scripts/examples/example_inputs/h-NbBCII10.pdb"
-TARGET="$RFAB/6i58_a3.pdb"
-FULL_TARGET_FASTA="$RFAB/6i58_a3.fasta"
-TARGET_TEMPLATE_PDB="$RFAB/6i58_a3.pdb"
-TARGET_TEMPLATE_CIF_GZ="$RFAB/chai_templates/6i58_a3.cif.gz"
+TARGET="$RFAB/12bn_chainA.pdb"
+FULL_TARGET_FASTA="$RFAB/12bn_chainA.fasta"
+TARGET_TEMPLATE_PDB="$RFAB/12bn_chainA.pdb"
+TARGET_TEMPLATE_CIF_GZ="$RFAB/chai_templates/12bn_clean_chain_A_template.cif.gz"
 
 # RFdiffusion and ProteinMPNN
 NUM_BACKBONES=2000
@@ -45,7 +45,7 @@ CHAI_VALIDATOR="$RFAB/scripts/chai_validate_campaign_templated.py"
 CHAI_DOWNLOADS_DIR="$RFAB/.chai-downloads"
 KALIGN_ENV="$RFAB/.kalign-env"
 CHAI_TEMPLATE_WORKDIR="$BASE/chai_target_template_workdir"
-CHAI_TEMPLATE_IDENTIFIER="6i58"
+CHAI_TEMPLATE_IDENTIFIER="12bn"
 CHAI_TEMPLATE_TARGET_NAME="T"
 CHAI_NUM_SAMPLES=3
 CHAI_RECYCLES=3
@@ -105,13 +105,13 @@ mkdir -p \
     "$COMPLETE_DIR"
 
 shopt -s nullglob
-EXISTING_RFDIFFUSION_QVS=("$RFDIR"/*.qv)
-# if [ "${#EXISTING_RFDIFFUSION_QVS[@]}" -gt 0 ]; then
-#     echo "ERROR: RFdiffusion .qv file(s) already exist in $RFDIR."
-#     printf 'Refusing to run without deleting: %s\n' "${EXISTING_RFDIFFUSION_QVS[@]}"
-#     exit 1
-# fi
-shopt -u nullglob
+# EXISTING_RFDIFFUSION_QVS=("$RFDIR"/*.qv)
+# # if [ "${#EXISTING_RFDIFFUSION_QVS[@]}" -gt 0 ]; then
+# #     echo "ERROR: RFdiffusion .qv file(s) already exist in $RFDIR."
+# #     printf 'Refusing to run without deleting: %s\n' "${EXISTING_RFDIFFUSION_QVS[@]}"
+# #     exit 1
+# # fi
+# shopt -u nullglob
 
 cd "$RFAB"
 
@@ -247,43 +247,43 @@ for ITEM in "${REGIMES[@]}"; do
 
     EXISTING="$(qv_count "$OUTQV")"
 
-    if [ "$EXISTING" -eq "$NUM_BACKBONES" ] && [ -s "$OUTSC" ]; then
-        echo "RFdiffusion already complete: $EXISTING designs"
-    else
+    # if [ "$EXISTING" -eq "$NUM_BACKBONES" ] && [ -s "$OUTSC" ]; then
+    #     echo "RFdiffusion already complete: $EXISTING designs"
+    # else
 
-        if [ -e "$OUTQV" ]; then
-            echo "Removing incomplete RFdiffusion output:"
-            echo "$OUTQV"
-            rm -f "$OUTQV"
-        fi
+    #     if [ -e "$OUTQV" ]; then
+    #         echo "Removing incomplete RFdiffusion output:"
+    #         echo "$OUTQV"
+    #         rm -f "$OUTQV"
+    #     fi
 
-        rm -f "$OUTSC"
+    #     rm -f "$OUTSC"
 
-        uv run rfdiffusion \
-            --target "$REGIME_TARGET" \
-            --framework "$REGIME_FRAMEWORK" \
-            --output-quiver "$OUTQV" \
-            --num-designs "$NUM_BACKBONES" \
-            --design-loops "$LOOPS" \
-            --hotspots "$REGIME_HOTSPOTS"
+    #     uv run rfdiffusion \
+    #         --target "$REGIME_TARGET" \
+    #         --framework "$REGIME_FRAMEWORK" \
+    #         --output-quiver "$OUTQV" \
+    #         --num-designs "$NUM_BACKBONES" \
+    #         --design-loops "$LOOPS" \
+    #         --hotspots "$REGIME_HOTSPOTS"
 
-        COUNT="$(qv_count "$OUTQV")"
+    #     COUNT="$(qv_count "$OUTQV")"
 
-        if [ "$COUNT" -ne "$NUM_BACKBONES" ]; then
-            echo "ERROR: Expected $NUM_BACKBONES RFdiffusion designs."
-            echo "Found: $COUNT"
-            exit 1
-        fi
-        rm -f "$OUTSC"
-        uv run qvscorefile "$OUTQV"
-    fi
+    #     if [ "$COUNT" -ne "$NUM_BACKBONES" ]; then
+    #         echo "ERROR: Expected $NUM_BACKBONES RFdiffusion designs."
+    #         echo "Found: $COUNT"
+    #         exit 1
+    #     fi
+    #     rm -f "$OUTSC"
+    #     uv run qvscorefile "$OUTQV"
+    # fi
 
-    if [ ! -s "$OUTSC" ]; then
-        echo "ERROR: RFdiffusion scorefile was not created:"
-        echo "$OUTSC"
-        exit 1
-    fi
-    touch "$RF_MARKER"
+    # if [ ! -s "$OUTSC" ]; then
+    #     echo "ERROR: RFdiffusion scorefile was not created:"
+    #     echo "$OUTSC"
+    #     exit 1
+    # fi
+    # touch "$RF_MARKER"
 
     report_duration "RFdiffusion ($NAME)" "$REGIME_START"
 
