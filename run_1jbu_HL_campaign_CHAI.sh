@@ -18,14 +18,15 @@ set -euo pipefail
 
 # Paths
 RFAB="$HOME/RFantibody"
-BASE="$HOME/Documents/RFantibody_outputs/1jbu_A183_mimic_chai_templated"
+BASE="$HOME/Documents/RFantibody_outputs/1jbu_A183_mimic_chai_templated2"
 FRAMEWORK="$RFAB/scripts/examples/example_inputs/h-NbBCII10.pdb"
 TARGET="$RFAB/1jbu_good_noLC.pdb"
-FULL_TARGET_FASTA="$RFAB/1jbu_chain_H.fasta"
-ADDITIONAL_TARGET_FASTA="$RFAB/1jbu_chain_L.fasta"
-TARGET_TEMPLATE_PDB="$RFAB/1jbu_noX_rfantibody.pdb"
-TARGET_TEMPLATE_CIF_GZ="$RFAB/chai_templates/1jbu_chain_HL_template.cif.gz"
-RESIDUE_MAP="$RFAB/1jbu_chain_H_residue_mapping.tsv"
+FULL_TARGET_FASTA="$RFAB/1jbu_H.fasta"
+ADDITIONAL_TARGET_FASTA="$RFAB/1jbu_L.fasta"
+TARGET_TEMPLATE_PDB="$RFAB/1jbu_HL.pdb"
+TARGET_TEMPLATE_CIF_GZ="$RFAB/chai_templates/1jbu_HL.cif.gz"
+RESIDUE_MAP="$HOME/RFantibody/1jbu_residue_mapping.tsv"
+
 
 # RFdiffusion and ProteinMPNN
 NUM_BACKBONES=1
@@ -36,7 +37,8 @@ AVERAGEMIN_MAX=100
 
 # Translate original 1JBU PDB hotspot numbering to the RFantibody-safe
 # numbering used in 1jbu_chain_H_rfd.pdb.
-HOTSPOTS_ORIGINAL="H89,H241,H250,H251,H252" # A-183 mimic
+# HOTSPOTS_ORIGINAL="H89,H241,H250,H251,H252" # A-183 mimic
+HOTSPOTS_ORIGINAL="H59,H61,H64,H88,H251" # mimic2
 if [ ! -s "$RESIDUE_MAP" ]; then
     echo "ERROR: Residue mapping file not found:"
     echo "$RESIDUE_MAP"
@@ -86,7 +88,7 @@ CHAI_VALIDATOR="$RFAB/scripts/chai_validate_campaign_templated_HL.py"
 CHAI_DOWNLOADS_DIR="$RFAB/.chai-downloads"
 KALIGN_ENV="$RFAB/.kalign-env"
 CHAI_TEMPLATE_WORKDIR="$BASE/chai_target_template_1jbu_chain_HL"
-CHAI_TEMPLATE_IDENTIFIER="1JBUCHAINHL"
+CHAI_TEMPLATE_IDENTIFIER="1jbu"
 CHAI_TEMPLATE_TARGET_NAME="T"
 CHAI_NUM_SAMPLES=3
 CHAI_RECYCLES=3
@@ -106,7 +108,7 @@ KEEP_GEOMETRY_FILTER_PDBS=false
 KEEP_FINAL_PDBS=false
 
 # Environment
-export CUDA_VISIBLE_DEVICES=1
+export CUDA_VISIBLE_DEVICES=0
 
 # Derived output paths
 RFDIR="$BASE/04_rfdiffusion"

@@ -105,13 +105,13 @@ mkdir -p \
     "$COMPLETE_DIR"
 
 shopt -s nullglob
-# EXISTING_RFDIFFUSION_QVS=("$RFDIR"/*.qv)
-# # if [ "${#EXISTING_RFDIFFUSION_QVS[@]}" -gt 0 ]; then
-# #     echo "ERROR: RFdiffusion .qv file(s) already exist in $RFDIR."
-# #     printf 'Refusing to run without deleting: %s\n' "${EXISTING_RFDIFFUSION_QVS[@]}"
-# #     exit 1
-# # fi
-# shopt -u nullglob
+EXISTING_RFDIFFUSION_QVS=("$RFDIR"/*.qv)
+# if [ "${#EXISTING_RFDIFFUSION_QVS[@]}" -gt 0 ]; then
+#     echo "ERROR: RFdiffusion .qv file(s) already exist in $RFDIR."
+#     printf 'Refusing to run without deleting: %s\n' "${EXISTING_RFDIFFUSION_QVS[@]}"
+#     exit 1
+# fi
+shopt -u nullglob
 
 cd "$RFAB"
 

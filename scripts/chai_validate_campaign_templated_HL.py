@@ -29,8 +29,13 @@ AA3_TO_1 = {
     "GLN": "Q", "GLU": "E", "GLY": "G", "HIS": "H", "ILE": "I",
     "LEU": "L", "LYS": "K", "MET": "M", "PHE": "F", "PRO": "P",
     "SER": "S", "THR": "T", "TRP": "W", "TYR": "Y", "VAL": "V",
-    "MSE": "M",
+    "MSE": "M", "GLA": "E",
 }
+
+# Chai/Kalign accepts canonical protein alphabets. 1JBU light-chain templates
+# contain gamma-carboxyglutamate (GLA), which is structurally glutamate with an
+# extra carboxyl group but is not accepted by Kalign's sequence parser.
+TEMPLATE_RESIDUE_NORMALIZATION = {"GLA": "GLU", "MSE": "MET"}
 
 
 def read_fasta(path: Path) -> str:
@@ -50,6 +55,16 @@ def chain_sequence(chain: gemmi.Chain) -> str:
         for residue in chain
         if residue.name.upper() in AA3_TO_1
     )
+
+
+def normalize_template_residues(structure: gemmi.Structure) -> None:
+    """Make local template polymer residue names compatible with Chai/Kalign."""
+    for model in structure:
+        for chain in model:
+            for residue in chain:
+                replacement = TEMPLATE_RESIDUE_NORMALIZATION.get(residue.name.upper())
+                if replacement is not None:
+                    residue.name = replacement
 
 
 def smith_waterman_matches(reference: str, query: str) -> list[tuple[int, int]]:
@@ -137,6 +152,7 @@ def write_custom_template(
     else:
         structure = gemmi.read_structure(str(template_pdb))
         structure.name = str(template_pdb)
+    normalize_template_residues(structure)
     selected: dict[str, tuple[str, str, list[tuple[int, int]]]] = {}
     used_chains: set[str] = set()
     for entity_name, target_sequence in target_sequences.items():
@@ -157,23 +173,35 @@ def write_custom_template(
     # instead of falling back to an RCSB download.
     cif = cif_dir / f"{identifier}.cif"
     cif_gz = cif_dir / f"{identifier}.cif.gz"
-    if prepared_cif_gz is not None:
-        shutil.copy2(prepared_cif_gz, cif_gz)
-        with gzip.open(prepared_cif_gz, "rb") as source, cif.open("wb") as destination:
-            shutil.copyfileobj(source, destination)
-    else:
-        structure.make_mmcif_document().write_file(str(cif))
-        with cif.open("rb") as source, gzip.open(cif_gz, "wb") as destination:
-            destination.write(source.read())
+    # Always emit a fresh CIF from the normalized structure. Copying the input
+    # CIF verbatim would retain noncanonical polymer sequence codes such as
+    # GLA, even though the coordinate structure above has been sanitized.
+    structure.make_mmcif_document().write_file(str(cif))
+    with cif.open("rb") as source, gzip.open(cif_gz, "wb") as destination:
+        destination.write(source.read())
 
-    # Chai's parser uses each entity as the m8 query and identifier_chain as
-    # the subject. Alignment bounds are 1-based inclusive.
+    # Older Chai releases deduplicate hits by template identifier before they
+    # retain the chain label. Give each target entity a distinct local CIF
+    # identifier, while keeping the contents (the H/L experimental structure)
+    # identical. This prevents the T hit from being overwritten by the L hit.
     m8 = work_dir / "target_only_template.m8"
     m8.parent.mkdir(parents=True, exist_ok=True)
     rows: list[str] = []
     entity_manifest: dict[str, dict[str, object]] = {}
     for entity_name, target_sequence in target_sequences.items():
         source_chain, source_sequence, mapping = selected[entity_name]
+        entity_identifier = f"{identifier}{entity_name}"
+        entity_cif = cif_dir / f"{entity_identifier}.cif"
+        entity_cif_gz = cif_dir / f"{entity_identifier}.cif.gz"
+        shutil.copy2(cif, entity_cif)
+        shutil.copy2(cif_gz, entity_cif_gz)
+        # Chai 0.6.x uppercases the identifier in one template-loader path,
+        # but not another. Materialize both spellings so a local custom hit
+        # cannot fall through to RCSB solely because of filename case.
+        for alias in {entity_identifier.lower(), entity_identifier.upper()}:
+            if alias != entity_identifier:
+                shutil.copy2(cif, cif_dir / f"{alias}.cif")
+                shutil.copy2(cif_gz, cif_dir / f"{alias}.cif.gz")
         query_positions = [query for query, _ in mapping]
         template_positions = [template for _, template in mapping]
         query_start, query_end = min(query_positions) + 1, max(query_positions) + 1
@@ -183,11 +211,13 @@ def write_custom_template(
             1, max(query_end - query_start + 1, template_end - template_start + 1)
         )
         rows.append("\t".join((
-            entity_name, f"{identifier}_{source_chain}", f"{identity:.3f}",
+            entity_name, f"{entity_identifier}_{source_chain}", f"{identity:.3f}",
             str(alignment_length), "0", "0", str(query_start), str(query_end),
             str(template_start), str(template_end), "0.0", "1000.0",
         )))
         entity_manifest[entity_name] = {
+            "template_identifier": entity_identifier,
+            "cif_gz": str(entity_cif_gz),
             "source_chain": source_chain,
             "target_fasta": str(target_fastas[entity_name].resolve()),
             "target_length": len(target_sequence),
@@ -254,6 +284,10 @@ def main() -> None:
         template_args.template_identifier,
         template_args.template_cif_gz,
     )
+    expected_cifs = [cif_dir / f"{template_args.template_identifier}{name}.cif.gz" for name in target_fastas]
+    missing_cifs = [str(path) for path in expected_cifs if not path.is_file() or path.stat().st_size == 0]
+    if missing_cifs:
+        raise RuntimeError("Local template was not materialized: " + ", ".join(missing_cifs))
     print(f"Chai target-only template: {m8}", flush=True)
 
     # Set this before importing chai_lab: v0.6.1 resolves its custom-template
@@ -265,7 +299,28 @@ def main() -> None:
         # module attribute here cleanly supplies the target template to every job.
         sys.path.insert(0, str(Path(__file__).resolve().parent))
         import chai_lab.chai1 as chai1
+        import chai_lab.data.io.rcsb as rcsb
         import chai_validate_campaign_HL as validator
+
+        # Same direct hook used by the known-working 7QOT adapter.  This is
+        # earlier than requests and is the code path Chai actually uses to
+        # obtain template CIFs.
+        original_download_cif_file = rcsb.download_cif_file
+        local_templates = {
+            f"{template_args.template_identifier}{entity_name}".upper():
+            cif_dir / f"{template_args.template_identifier}{entity_name}.cif.gz"
+            for entity_name in target_fastas
+        }
+
+        def download_local_template_or_rcsb(pdb_id: str, directory: Path) -> Path:
+            local_cif = local_templates.get(pdb_id.upper())
+            if local_cif is not None:
+                if not local_cif.is_file():
+                    raise FileNotFoundError(f"Prepared local template is missing: {local_cif}")
+                return local_cif
+            return original_download_cif_file(pdb_id, directory)
+
+        rcsb.download_cif_file = download_local_template_or_rcsb
 
         original_run_inference = chai1.run_inference
 
