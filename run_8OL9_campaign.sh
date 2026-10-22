@@ -17,7 +17,7 @@ RFAB="$HOME/RFantibody"
 TARGET="$HOME/RFantibody/8OL9_noLC.pdb"
 FRAMEWORK="$RFAB/scripts/examples/example_inputs/h-NbBCII10.pdb"
 
-BASE="$HOME/Documents/RFantibody_outputs/8ol9_hydrophobic4"
+BASE="$HOME/Documents/RFantibody_outputs/8ol9_hydrophobic_test1"
 
 RFDIR="$BASE/04_rfdiffusion"
 FILTERDIR="$BASE/04b_filtered"
@@ -64,12 +64,12 @@ mkdir -p \
 
 shopt -s nullglob
 EXISTING_RFDIFFUSION_QVS=("$RFDIR"/*.qv)
-if [ "${#EXISTING_RFDIFFUSION_QVS[@]}" -gt 0 ]; then
-    echo "ERROR: RFdiffusion .qv file(s) already exist in $RFDIR."
-    printf 'Refusing to run without deleting: %s\n' "${EXISTING_RFDIFFUSION_QVS[@]}"
-    exit 1
-fi
-shopt -u nullglob
+# if [ "${#EXISTING_RFDIFFUSION_QVS[@]}" -gt 0 ]; then
+#     echo "ERROR: RFdiffusion .qv file(s) already exist in $RFDIR."
+#     printf 'Refusing to run without deleting: %s\n' "${EXISTING_RFDIFFUSION_QVS[@]}"
+#     exit 1
+# fi
+# shopt -u nullglob
 
 cd "$RFAB"
 
@@ -88,15 +88,16 @@ export CUDA_VISIBLE_DEVICES=GPU-589685a4-8d09-fe8d-b4d2-5268717630e0
 # CAMPAIGN SETTINGS
 # ============================================================
 
-NUM_BACKBONES=200
-SEQS_PER_BACKBONE=5
+NUM_BACKBONES=10
+SEQS_PER_BACKBONE=1
 MPNN_TEMP=0.2
 
-MINDIST_MAX=6
-AVERAGEMIN_MAX=10
+MINDIST_MAX=60
+AVERAGEMIN_MAX=100
 
 # HOTSPOTS="H212,H215,H216,H217" #Imitates FaB in crystal structure. later note: is this longbinidng? - yes
-HOTSPOTS="H204,H223" #hbinding1
+# HOTSPOTS="H204,H223" #hbinding1
+HOTSPOTS="H204,H175" #hbinding1.5
 # HOTSPOTS="H85,H161,H155" #hydrophobicbinding2 yet to do
 
 REGIMES=(
@@ -216,15 +217,15 @@ for ITEM in "${REGIMES[@]}"; do
     #     fi
     # fi
 
-    # # qvscorefile creates sibling .sc itself.
-    # rm -f "$OUTSC"
-    # uv run qvscorefile "$OUTQV"
+    # qvscorefile creates sibling .sc itself.
+    rm -f "$OUTSC"
+    uv run qvscorefile "$OUTQV"
 
-    # if [ ! -s "$OUTSC" ]; then
-    #     echo "ERROR: RFdiffusion scorefile was not created:"
-    #     echo "$OUTSC"
-    #     exit 1
-    # fi
+    if [ ! -s "$OUTSC" ]; then
+        echo "ERROR: RFdiffusion scorefile was not created:"
+        echo "$OUTSC"
+        exit 1
+    fi
 
     # report_duration "RFdiffusion ($NAME)" "$REGIME_START"
 
@@ -264,124 +265,124 @@ for ITEM in "${REGIMES[@]}"; do
 
     REGIME_START="$(date +%s)"
 
-#     rm -rf "$TEMPDIR"
-#     mkdir -p "$TEMPDIR"
+    rm -rf "$TEMPDIR"
+    mkdir -p "$TEMPDIR"
 
-#     # Extract all RFdiffusion designs.
-#     uv run qvextract \
-#         "$INPUT_QV" \
-#         -o "$TEMPDIR"
+    # Extract all RFdiffusion designs.
+    uv run qvextract \
+        "$INPUT_QV" \
+        -o "$TEMPDIR"
 
-#     # Parse scorefile and delete failing structures.
-#     INPUT_SC="$INPUT_SC" \
-#     TEMPDIR="$TEMPDIR" \
-#     SUMMARY="$SUMMARY" \
-#     MINDIST_MAX="$MINDIST_MAX" \
-#     AVERAGEMIN_MAX="$AVERAGEMIN_MAX" \
-#     uv run python - <<'PY'
-# import os
-# from pathlib import Path
+    # Parse scorefile and delete failing structures.
+    INPUT_SC="$INPUT_SC" \
+    TEMPDIR="$TEMPDIR" \
+    SUMMARY="$SUMMARY" \
+    MINDIST_MAX="$MINDIST_MAX" \
+    AVERAGEMIN_MAX="$AVERAGEMIN_MAX" \
+    uv run python - <<'PY'
+import os
+from pathlib import Path
 
-# sc = Path(os.environ["INPUT_SC"])
-# tempdir = Path(os.environ["TEMPDIR"])
-# summary = Path(os.environ["SUMMARY"])
+sc = Path(os.environ["INPUT_SC"])
+tempdir = Path(os.environ["TEMPDIR"])
+summary = Path(os.environ["SUMMARY"])
 
-# mindist_max = float(os.environ["MINDIST_MAX"])
-# averagemin_max = float(os.environ["AVERAGEMIN_MAX"])
+mindist_max = float(os.environ["MINDIST_MAX"])
+averagemin_max = float(os.environ["AVERAGEMIN_MAX"])
 
-# with sc.open() as f:
-#     header = f.readline().split()
+with sc.open() as f:
+    header = f.readline().split()
 
-#     mindist_i = header.index("mindist")
-#     averagemin_i = header.index("averagemin")
-#     tag_i = header.index("tag")
+    mindist_i = header.index("mindist")
+    averagemin_i = header.index("averagemin")
+    tag_i = header.index("tag")
 
-#     rows = []
-#     passing = set()
+    rows = []
+    passing = set()
 
-#     for line in f:
-#         if not line.strip():
-#             continue
+    for line in f:
+        if not line.strip():
+            continue
 
-#         cols = line.split()
+        cols = line.split()
 
-#         try:
-#             mindist = float(cols[mindist_i])
-#             averagemin = float(cols[averagemin_i])
-#         except (ValueError, IndexError):
-#             continue
+        try:
+            mindist = float(cols[mindist_i])
+            averagemin = float(cols[averagemin_i])
+        except (ValueError, IndexError):
+            continue
 
-#         tag = cols[tag_i]
+        tag = cols[tag_i]
 
-#         passed = (
-#             mindist <= mindist_max
-#             and averagemin <= averagemin_max
-#         )
+        passed = (
+            mindist <= mindist_max
+            and averagemin <= averagemin_max
+        )
 
-#         rows.append((tag, mindist, averagemin, passed))
+        rows.append((tag, mindist, averagemin, passed))
 
-#         if passed:
-#             passing.add(tag)
+        if passed:
+            passing.add(tag)
 
-# with summary.open("w") as out:
-#     out.write("tag\tmindist\taveragemin\tpass\n")
+with summary.open("w") as out:
+    out.write("tag\tmindist\taveragemin\tpass\n")
 
-#     for tag, mindist, averagemin, passed in rows:
-#         out.write(
-#             f"{tag}\t{mindist:.3f}\t"
-#             f"{averagemin:.3f}\t{passed}\n"
-#         )
+    for tag, mindist, averagemin, passed in rows:
+        out.write(
+            f"{tag}\t{mindist:.3f}\t"
+            f"{averagemin:.3f}\t{passed}\n"
+        )
 
-# for pdb in tempdir.glob("*.pdb"):
-#     if pdb.stem not in passing:
-#         pdb.unlink()
+for pdb in tempdir.glob("*.pdb"):
+    if pdb.stem not in passing:
+        pdb.unlink()
 
-# print(f"Passed {len(passing)}/{len(rows)} designs")
+print(f"Passed {len(passing)}/{len(rows)} designs")
 
-# for tag, mindist, averagemin, passed in rows:
-#     if passed:
-#         print(
-#             f" PASS {tag:25s} "
-#             f"mindist={mindist:.2f} "
-#             f"averagemin={averagemin:.2f}"
-#         )
-# PY
+for tag, mindist, averagemin, passed in rows:
+    if passed:
+        print(
+            f" PASS {tag:25s} "
+            f"mindist={mindist:.2f} "
+            f"averagemin={averagemin:.2f}"
+        )
+PY
 
-#     PASS_COUNT="$(find "$TEMPDIR" -maxdepth 1 -name '*.pdb' | wc -l)"
+    PASS_COUNT="$(find "$TEMPDIR" -maxdepth 1 -name '*.pdb' | wc -l)"
 
-#     echo
-#     echo "Passing backbones: $PASS_COUNT"
+    echo
+    echo "Passing backbones: $PASS_COUNT"
 
-#     rm -f "$FILTERED_QV"
+    rm -f "$FILTERED_QV"
 
-#     if [ "$PASS_COUNT" -eq 0 ]; then
-#         echo "WARNING: No passing backbones for $NAME."
-#         echo "Skipping ProteinMPNN/RF2 for this regime."
-#         report_duration "Filtering ($NAME)" "$REGIME_START"
-#         continue
-#     fi
+    if [ "$PASS_COUNT" -eq 0 ]; then
+        echo "WARNING: No passing backbones for $NAME."
+        echo "Skipping ProteinMPNN/RF2 for this regime."
+        report_duration "Filtering ($NAME)" "$REGIME_START"
+        continue
+    fi
 
-#     # qvfrompdbs writes Quiver binary to stdout.
-#     uv run qvfrompdbs \
-#         "$TEMPDIR"/*.pdb \
-#         > "$FILTERED_QV"
+    # qvfrompdbs writes Quiver binary to stdout.
+    uv run qvfrompdbs \
+        "$TEMPDIR"/*.pdb \
+        > "$FILTERED_QV"
 
-#     CREATED="$(qv_count "$FILTERED_QV")"
+    CREATED="$(qv_count "$FILTERED_QV")"
 
-#     if [ "$CREATED" -ne "$PASS_COUNT" ]; then
-#         echo "ERROR: Filtered Quiver count mismatch."
-#         echo "Expected: $PASS_COUNT"
-#         echo "Created:  $CREATED"
-#         exit 1
-#     fi
+    if [ "$CREATED" -ne "$PASS_COUNT" ]; then
+        echo "ERROR: Filtered Quiver count mismatch."
+        echo "Expected: $PASS_COUNT"
+        echo "Created:  $CREATED"
+        exit 1
+    fi
 
-#     if [ "$KEEP_GEOMETRY_FILTER_PDBS" != true ]; then
-#         rm -rf "$TEMPDIR"
-#     fi
+    if [ "$KEEP_GEOMETRY_FILTER_PDBS" != true ]; then
+        rm -rf "$TEMPDIR"
+    fi
 
-#     echo "Filtered Quiver contains $CREATED backbones."
+    echo "Filtered Quiver contains $CREATED backbones."
 
-#     report_duration "Filtering ($NAME)" "$REGIME_START"
+    report_duration "Filtering ($NAME)" "$REGIME_START"
 
 done
 
