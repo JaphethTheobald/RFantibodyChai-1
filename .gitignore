@@ -19,8 +19,12 @@ dist
 scratch
 .DS_Store
 .devcontainer
+<<<<<<< HEAD
 /Best.tar.xz
 /.chai-downloads
+=======
+/.chai-downloads/
+>>>>>>> 1d8b9ba (chai-downloads maybe removed?)
 .chai-venv
 .venv
 test
