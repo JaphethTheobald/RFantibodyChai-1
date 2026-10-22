@@ -1,0 +1,116 @@
+{
+  "build": "py312hbc31894_1",
+  "build_number": 1,
+  "channel": "https://conda.anaconda.org/conda-forge/linux-64",
+  "constrains": [],
+  "depends": [
+    "__glibc >=2.17,<3.0.a0",
+    "libgcc >=15",
+    "libstdcxx >=15"
+  ],
+  "extracted_package_dir": "/home/schrogpu/.conda/pkgs/kalign-3.6.0-py312hbc31894_1",
+  "features": "",
+  "files": [
+    "bin/kalign",
+    "include/kalign/kalign.h",
+    "include/kalign/kalign_export.h",
+    "lib/cmake/kalign/kalignConfig.cmake",
+    "lib/cmake/kalign/kalignConfigVersion.cmake",
+    "lib/cmake/kalign/kalignTargets-release.cmake",
+    "lib/cmake/kalign/kalignTargets.cmake",
+    "lib/libkalign.so",
+    "lib/libkalign.so.3",
+    "lib/libkalign.so.3.6.0"
+  ],
+  "fn": "kalign-3.6.0-py312hbc31894_1.conda",
+  "license": "Apache-2.0",
+  "license_family": "APACHE",
+  "link": {
+    "source": "/home/schrogpu/.conda/pkgs/kalign-3.6.0-py312hbc31894_1",
+    "type": 1
+  },
+  "md5": "52ef05a8d7ed87f64ad996b7afbd5018",
+  "name": "kalign",
+  "package_tarball_full_path": "/home/schrogpu/.conda/pkgs/kalign-3.6.0-py312hbc31894_1.conda",
+  "paths_data": {
+    "paths": [
+      {
+        "_path": "bin/kalign",
+        "path_type": "hardlink",
+        "sha256": "502e8f951336d3a6a90de4016c73e5f814c0b54847b8866c163b86c520734a28",
+        "sha256_in_prefix": "502e8f951336d3a6a90de4016c73e5f814c0b54847b8866c163b86c520734a28",
+        "size_in_bytes": 341216
+      },
+      {
+        "_path": "include/kalign/kalign.h",
+        "path_type": "hardlink",
+        "sha256": "b06b7621f2ca25845664f58e5f1a9f0cdcd1ce1a32fd629ff24173df86b9edbd",
+        "sha256_in_prefix": "b06b7621f2ca25845664f58e5f1a9f0cdcd1ce1a32fd629ff24173df86b9edbd",
+        "size_in_bytes": 6756
+      },
+      {
+        "_path": "include/kalign/kalign_export.h",
+        "path_type": "hardlink",
+        "sha256": "dc321e870de939b97bfeebb357b1b2638ed8a41d71bcb88bfe9896eafc7e559d",
+        "sha256_in_prefix": "dc321e870de939b97bfeebb357b1b2638ed8a41d71bcb88bfe9896eafc7e559d",
+        "size_in_bytes": 1077
+      },
+      {
+        "_path": "lib/cmake/kalign/kalignConfig.cmake",
+        "path_type": "hardlink",
+        "sha256": "85df12bbbe0c8b0a6a10031903d21769b38b8d66338428fe432ec293956728db",
+        "sha256_in_prefix": "85df12bbbe0c8b0a6a10031903d21769b38b8d66338428fe432ec293956728db",
+        "size_in_bytes": 974
+      },
+      {
+        "_path": "lib/cmake/kalign/kalignConfigVersion.cmake",
+        "path_type": "hardlink",
+        "sha256": "a7629c2dab6dd238629b1f95d4c578b07f9f77d01c7747a7aeae9e6b1d84ee54",
+        "sha256_in_prefix": "a7629c2dab6dd238629b1f95d4c578b07f9f77d01c7747a7aeae9e6b1d84ee54",
+        "size_in_bytes": 1861
+      },
+      {
+        "_path": "lib/cmake/kalign/kalignTargets-release.cmake",
+        "path_type": "hardlink",
+        "sha256": "db3cf2a328c7319778b918688c34aced80894209f7f07714e6cb90b280df3ca2",
+        "sha256_in_prefix": "db3cf2a328c7319778b918688c34aced80894209f7f07714e6cb90b280df3ca2",
+        "size_in_bytes": 850
+      },
+      {
+        "_path": "lib/cmake/kalign/kalignTargets.cmake",
+        "path_type": "hardlink",
+        "sha256": "e441b253530e34fd71a39441689053762995ba34c1cedffc59921caf8a0f6740",
+        "sha256_in_prefix": "e441b253530e34fd71a39441689053762995ba34c1cedffc59921caf8a0f6740",
+        "size_in_bytes": 4141
+      },
+      {
+        "_path": "lib/libkalign.so",
+        "path_type": "softlink",
+        "sha256": "f933961153167b6853005da99bf286d09787ecae10d3b407f46b4faf51482f13",
+        "size_in_bytes": 14
+      },
+      {
+        "_path": "lib/libkalign.so.3",
+        "path_type": "softlink",
+        "sha256": "f933961153167b6853005da99bf286d09787ecae10d3b407f46b4faf51482f13",
+        "size_in_bytes": 18
+      },
+      {
+        "_path": "lib/libkalign.so.3.6.0",
+        "path_type": "hardlink",
+        "sha256": "f933961153167b6853005da99bf286d09787ecae10d3b407f46b4faf51482f13",
+        "sha256_in_prefix": "f933961153167b6853005da99bf286d09787ecae10d3b407f46b4faf51482f13",
+        "size_in_bytes": 418080
+      }
+    ],
+    "paths_version": 1
+  },
+  "requested_spec": "kalign",
+  "sha256": "23ffb65631e69259891d4efc5c5f6fec38878033b711ddbec37a180259c10f12",
+  "size": 199612,
+  "subdir": "linux-64",
+  "timestamp": 1791092518103,
+  "track_features": "",
+  "url": "https://conda.anaconda.org/conda-forge/linux-64/kalign-3.6.0-py312hbc31894_1.conda",
+  "version": "3.6.0"
+}

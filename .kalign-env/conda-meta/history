@@ -1,0 +1,9 @@
+==> 2026-10-08 16:56:07 <==
+# cmd: /usr/bin/conda create -y -p /home/schrogpu/RFantibody/.kalign-env -c conda-forge kalign
+# conda version: 4.10.3
++conda-forge/linux-64::_openmp_mutex-4.5-20_gnu
++conda-forge/linux-64::kalign-3.6.0-py312hbc31894_1
++conda-forge/linux-64::libgcc-16.2.0-ha9f2e26_7
++conda-forge/linux-64::libgomp-16.2.0-he0feb66_7
++conda-forge/linux-64::libstdcxx-16.2.0-h934c35e_7
+# update specs: ['kalign']

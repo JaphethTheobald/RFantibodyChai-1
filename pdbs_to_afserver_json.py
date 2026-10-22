@@ -7,8 +7,8 @@ templates, so the resulting AlphaFold prediction is an independent sequence-
 based check of the designed complex.
 
 python3 /home/schrogpu/RFantibody/pdbs_to_afserver_json.py \
-  /home/schrogpu/Documents/RFantibody_outputs/Best/f11_7qot/7qot_tworegimes/long_selected \
-  --output /home/schrogpu/Documents/RFantibody_outputs/Best/f11_7qot/7qot_tworegimes/long_selected/afserver_jobs.json \
+  /home/schrogpu/Documents/RFantibody_outputs/7qot_chai_templated2/08_filtered_PDBs_score_review \
+  --output /home/schrogpu/Documents/RFantibody_outputs/7qot_chai_templated2/08_filtered_PDBs_score_review/afserver_jobs.json \
   --recursive
 """
 

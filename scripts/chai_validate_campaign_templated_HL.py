@@ -138,20 +138,21 @@ def write_custom_template(
     if not identifier.isalnum():
         raise ValueError("--template-identifier must contain only letters and digits")
     target_sequences = {entity: read_fasta(path) for entity, path in target_fastas.items()}
+    # The PDB is the source of truth for this H/L template.  Earlier versions
+    # gave --template-cif-gz priority, which silently reused the old prepared
+    # 1JBU CIF instead of the supplied clean, canonical H/L PDB.  That made
+    # debugging impossible and is the likely origin of the persistent Kalign
+    # failure.  Keep the argument accepted for backward-compatible CLIs, but
+    # deliberately do not read it.
     if prepared_cif_gz is not None:
-        if not prepared_cif_gz.is_file():
-            raise FileNotFoundError(f"Prepared template CIF not found: {prepared_cif_gz}")
-        with gzip.open(prepared_cif_gz, "rb") as source:
-            cif_text = source.read().decode("utf-8")
-        prepared_cif = work_dir / f"{identifier}.prepared.cif"
-        prepared_cif.parent.mkdir(parents=True, exist_ok=True)
-        prepared_cif.write_text(cif_text)
-        structure = gemmi.read_structure(str(prepared_cif))
-        prepared_cif.unlink()
-        structure.name = str(prepared_cif_gz)
-    else:
-        structure = gemmi.read_structure(str(template_pdb))
-        structure.name = str(template_pdb)
+        print(
+            f"Ignoring --template-cif-gz ({prepared_cif_gz}); rebuilding the local "
+            f"template from --template-pdb ({template_pdb}).",
+            file=sys.stderr,
+            flush=True,
+        )
+    structure = gemmi.read_structure(str(template_pdb))
+    structure.name = str(template_pdb)
     normalize_template_residues(structure)
     selected: dict[str, tuple[str, str, list[tuple[int, int]]]] = {}
     used_chains: set[str] = set()
@@ -259,8 +260,6 @@ def main() -> None:
     parser.add_argument("--template-work-dir", type=Path, required=True)
     parser.add_argument("--template-identifier", required=True)
     parser.add_argument("--template-target-name", default="T")
-    parser.add_argument("--additional-template-target-fasta", type=Path)
-    parser.add_argument("--additional-template-target-name", default="L")
     template_args, validator_args = parser.parse_known_args()
     for path in (template_args.template_pdb, template_args.template_target_fasta):
         if not path.is_file() or path.stat().st_size == 0:

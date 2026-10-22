@@ -23,8 +23,11 @@ FRAMEWORK="$RFAB/scripts/examples/example_inputs/h-NbBCII10.pdb"
 TARGET="$RFAB/1jbu_good_noLC.pdb"
 FULL_TARGET_FASTA="$RFAB/1jbu_H.fasta"
 ADDITIONAL_TARGET_FASTA="$RFAB/1jbu_L.fasta"
+# This is the sole source for the Chai target-context template.  It contains
+# canonical protein residues in chain H (239 aa) and chain L (54 aa).
+# Do not also pass an old CIF here: the prior adapter gave the CIF precedence,
+# so this PDB was never actually used.
 TARGET_TEMPLATE_PDB="$RFAB/1jbu_HL.pdb"
-TARGET_TEMPLATE_CIF_GZ="$RFAB/chai_templates/1jbu_HL.cif.gz"
 RESIDUE_MAP="$HOME/RFantibody/1jbu_residue_mapping.tsv"
 
 
@@ -199,12 +202,6 @@ if [ ! -s "$TARGET_TEMPLATE_PDB" ]; then
     exit 1
 fi
 
-if [ ! -s "$TARGET_TEMPLATE_CIF_GZ" ]; then
-    echo "ERROR: Prepared Chai template CIF not found:"
-    echo "$TARGET_TEMPLATE_CIF_GZ"
-    exit 1
-fi
-
 if [ ! -x "$CHAI_PYTHON" ]; then
     echo "ERROR: Chai Python is not installed:"
     echo "$CHAI_PYTHON"
@@ -296,43 +293,43 @@ for ITEM in "${REGIMES[@]}"; do
 
     EXISTING="$(qv_count "$OUTQV")"
 
-    if [ "$EXISTING" -eq "$NUM_BACKBONES" ] && [ -s "$OUTSC" ]; then
-        echo "RFdiffusion already complete: $EXISTING designs"
-    else
+    # if [ "$EXISTING" -eq "$NUM_BACKBONES" ] && [ -s "$OUTSC" ]; then
+    #     echo "RFdiffusion already complete: $EXISTING designs"
+    # else
 
-        if [ -e "$OUTQV" ]; then
-            echo "Removing incomplete RFdiffusion output:"
-            echo "$OUTQV"
-            rm -f "$OUTQV"
-        fi
+    #     if [ -e "$OUTQV" ]; then
+    #         echo "Removing incomplete RFdiffusion output:"
+    #         echo "$OUTQV"
+    #         rm -f "$OUTQV"
+    #     fi
 
-        rm -f "$OUTSC"
+    #     rm -f "$OUTSC"
 
-        uv run rfdiffusion \
-            --target "$REGIME_TARGET" \
-            --framework "$REGIME_FRAMEWORK" \
-            --output-quiver "$OUTQV" \
-            --num-designs "$NUM_BACKBONES" \
-            --design-loops "$LOOPS" \
-            --hotspots "$REGIME_HOTSPOTS"
+    #     uv run rfdiffusion \
+    #         --target "$REGIME_TARGET" \
+    #         --framework "$REGIME_FRAMEWORK" \
+    #         --output-quiver "$OUTQV" \
+    #         --num-designs "$NUM_BACKBONES" \
+    #         --design-loops "$LOOPS" \
+    #         --hotspots "$REGIME_HOTSPOTS"
 
-        COUNT="$(qv_count "$OUTQV")"
+    #     COUNT="$(qv_count "$OUTQV")"
 
-        if [ "$COUNT" -ne "$NUM_BACKBONES" ]; then
-            echo "ERROR: Expected $NUM_BACKBONES RFdiffusion designs."
-            echo "Found: $COUNT"
-            exit 1
-        fi
-        rm -f "$OUTSC"
-        uv run qvscorefile "$OUTQV"
-    fi
+    #     if [ "$COUNT" -ne "$NUM_BACKBONES" ]; then
+    #         echo "ERROR: Expected $NUM_BACKBONES RFdiffusion designs."
+    #         echo "Found: $COUNT"
+    #         exit 1
+    #     fi
+    #     rm -f "$OUTSC"
+        # uv run qvscorefile "$OUTQV"
+    # fi
 
-    if [ ! -s "$OUTSC" ]; then
-        echo "ERROR: RFdiffusion scorefile was not created:"
-        echo "$OUTSC"
-        exit 1
-    fi
-    touch "$RF_MARKER"
+    # if [ ! -s "$OUTSC" ]; then
+    #     echo "ERROR: RFdiffusion scorefile was not created:"
+    #     echo "$OUTSC"
+    #     exit 1
+    # fi
+    # touch "$RF_MARKER"
 
     report_duration "RFdiffusion ($NAME)" "$REGIME_START"
 
@@ -640,7 +637,6 @@ for ITEM in "${REGIMES[@]}"; do
             --full-target-fasta "$FULL_TARGET_FASTA" \
             --additional-target-fasta "$ADDITIONAL_TARGET_FASTA" \
             --template-pdb "$TARGET_TEMPLATE_PDB" \
-            --template-cif-gz "$TARGET_TEMPLATE_CIF_GZ" \
             --template-target-fasta "$FULL_TARGET_FASTA" \
             --additional-template-target-fasta "$ADDITIONAL_TARGET_FASTA" \
             --template-work-dir "$CHAI_TEMPLATE_WORKDIR" \

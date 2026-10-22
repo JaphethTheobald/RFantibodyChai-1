@@ -1,26 +1,26 @@
 #!/bin/bash
 set -euo pipefail
 
-# Review the final 6i58 templated Chai scores without changing campaign outputs.
+# Review the final 7qot templated Chai scores without changing campaign outputs.
 # Run from the RFantibody repository root:
-#   ./score_6i58_final_pdbs.sh
+#   ./score_7qot_final_pdbs.sh
 
 # ============================================================
 # EDITABLE CONFIGURATION
 # ============================================================
 
 RFAB="$HOME/RFantibody"
-BASE="$HOME/Documents/RFantibody_outputs/7qot_chai_templated2"
+BASE="$HOME/Documents/RFantibody_outputs/8ol9_2nd_hydrophobic2long"
 
 SCORE_DIR="$BASE/06_chai_target_template"
-RAW_DIR="$SCORE_DIR/a2a3_raw"
-SCORE_FILE="$SCORE_DIR/7qot_chai_prelim_rf2.sc"
-PDB_DIR="$BASE/07_final_pdbs_target_template/a2a3"
+RAW_DIR="$SCORE_DIR/long_raw"
+SCORE_FILE="$SCORE_DIR/8ol9_2nd_hydrophobic_prelim_rf2.sc"
+PDB_DIR="$BASE/07_final_pdbs_target_template/long"
 OUTPUT_DIR="$BASE/08_filtered_PDBs_score_review"
 
-CDR_RMSD_MAX=3
-ANTIBODY_RMSD_MAX=4
-INTERACTION_PAE_MAX=10
+CDR_RMSD_MAX=5
+ANTIBODY_RMSD_MAX=5
+INTERACTION_PAE_MAX=11
 DUPLICATE_MIN_COUNT=4
 DUPLICATE_KEEP_COUNT=2
 DUPLICATE_PAE_DELTA=3

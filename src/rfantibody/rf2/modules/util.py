@@ -64,10 +64,8 @@ class Dotdict(dict):
             raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{attr}'")
 
 def random_round(number):
-    """
-    Randomly rounds up or down
-    """
-    return np.floor(number).astype(int) + np.random.randint(0, 2)
+    lower = int(np.floor(number))
+    return lower + int(np.random.random() < (number - lower))
        
 def mask_hotspots(pose: "Pose", show_proportion: float) -> torch.Tensor[bool]:
     """

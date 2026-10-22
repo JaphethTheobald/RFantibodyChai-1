@@ -221,62 +221,10 @@ def load_reference(pdb: Path, target_chain: str, vhh_chain: str) -> tuple[str, l
     return t_seq, t_ca, h_seq, h_ca, parse_cdrs(pdb, len(h_seq))
 
 
-def candidate_chains(
-    cif: Path,
-    target_sequence: str,
-    vhh_sequence: str,
-    additional_target_sequence: str | None = None,
-) -> tuple[str, list[np.ndarray | None], str, list[np.ndarray | None], gemmi.Structure]:
-    """Identify Chai output chains by sequence, not version-specific CIF IDs.
-
-    Older Chai releases write A/B/C even when the FASTA entities are named
-    T/L/H.  The returned structure is renamed to the RFantibody convention so
-    the saved selected PDB remains usable by the existing final filter.
-    """
+def candidate_chains(cif: Path) -> tuple[str, list[np.ndarray | None], str, list[np.ndarray | None], gemmi.Structure]:
     structure = gemmi.read_structure(str(cif))
     structure.name = str(cif)
-    records: list[tuple[gemmi.Chain, str, list[np.ndarray | None]]] = []
-    for chain in structure[0]:
-        sequence, coords = chain_records(structure, chain.name)
-        records.append((chain, sequence, coords))
-
-    def choose(reference: str, used: set[int], label: str) -> int:
-        choices = [
-            (len(local_matches(reference, sequence)), index)
-            for index, (_, sequence, _) in enumerate(records)
-            if index not in used
-        ]
-        if not choices:
-            raise ValueError(f"No predicted chain remains for {label} in {cif}")
-        score, index = max(choices)
-        minimum = max(20, int(0.60 * min(len(reference), len(records[index][1]))))
-        if score < minimum:
-            observed = ", ".join(f"{chain.name}:{len(sequence)}" for chain, sequence, _ in records)
-            raise ValueError(
-                f"Could not identify predicted {label} by sequence in {cif}; "
-                f"best exact alignment has {score} residues (chains {observed})"
-            )
-        return index
-
-    used: set[int] = set()
-    target_index = choose(target_sequence, used, "primary target")
-    used.add(target_index)
-    additional_index: int | None = None
-    if additional_target_sequence is not None:
-        additional_index = choose(additional_target_sequence, used, "additional target")
-        used.add(additional_index)
-    vhh_index = choose(vhh_sequence, used, "VHH")
-
-    # Canonicalize selected output PDB chain names for downstream RFantibody
-    # scripts. Do this only after sequence matching, because names may start
-    # as A/B/C in older Chai versions.
-    records[target_index][0].name = "T"
-    if additional_index is not None:
-        records[additional_index][0].name = "L"
-    records[vhh_index][0].name = "H"
-    _, target_seq, target_ca = records[target_index]
-    _, vhh_seq, vhh_ca = records[vhh_index]
-    return target_seq, target_ca, vhh_seq, vhh_ca, structure
+    return (*chain_records(structure, "T"), *chain_records(structure, "H"), structure)
 
 
 def save_selected_pdb(structure: gemmi.Structure, path: Path) -> None:
@@ -325,9 +273,7 @@ def one_design(
     np.savez_compressed(result_path.parent / "chai_tensors.npz", pae=pae_all, plddt=plddt_all)
     sample_rows: list[dict[str, Any]] = []
     for index, (cif, ranking) in enumerate(zip(candidates.cif_paths, candidates.ranking_data, strict=True)):
-        pred_t_seq, pred_t_ca, pred_h_seq, pred_h_ca, structure = candidate_chains(
-            Path(cif), target_sequence, ref_h_seq, additional_target_sequence
-        )
+        pred_t_seq, pred_t_ca, pred_h_seq, pred_h_ca, structure = candidate_chains(Path(cif))
         target_context_length = len(target_sequence) + (len(additional_target_sequence) if additional_target_sequence else 0)
         legacy = score_candidate(ref_t_seq, ref_t_ca, ref_h_seq, ref_h_ca, pred_t_seq, pred_t_ca, pred_h_seq, pred_h_ca, cdrs, pae_all[index], plddt_all[index], target_context_length)
         legacy["tag"] = tag
@@ -341,9 +287,7 @@ def one_design(
         row["has_inter_chain_clashes"], finite_or_inf(row["legacy"]["target_aligned_cdr_rmsd"]),
         finite_or_inf(row["legacy"]["interaction_pae"]), -finite_or_inf(row["iptm"]),
     ))
-    _, _, _, _, chosen_structure = candidate_chains(
-        Path(chosen["cif"]), target_sequence, ref_h_seq, additional_target_sequence
-    )
+    _, _, _, _, chosen_structure = candidate_chains(Path(chosen["cif"]))
     save_selected_pdb(chosen_structure, pdb_out / f"{tag}.pdb")
     result = {"tag": tag, "selected_model_index": chosen["model_index"], "legacy": chosen["legacy"], "samples": sample_rows}
     result_path.write_text(json.dumps(result, indent=2, allow_nan=True) + "\n")
@@ -361,7 +305,6 @@ def main() -> None:
     parser.add_argument("--details", type=Path, required=True)
     parser.add_argument("--target-chain", default="T")
     parser.add_argument("--vhh-chain", default="H")
-    parser.add_argument("--additional-chain", default="L")
     parser.add_argument("--num-samples", type=int, default=5)
     parser.add_argument("--recycles", type=int, default=3)
     parser.add_argument("--timesteps", type=int, default=200)
