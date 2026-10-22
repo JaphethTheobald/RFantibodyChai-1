@@ -20,3 +20,7 @@ scratch
 .DS_Store
 .devcontainer
 /Best.tar.xz
+/.chai-downloads
+.chai-venv
+.venv
+test
