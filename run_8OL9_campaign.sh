@@ -36,7 +36,7 @@ FINAL_DUPLICATE_PAE_DELTA=3
 FINAL_DUPLICATE_COMPOSITE_DELTA=0.3
 FINAL_AFSERVER_BATCH_SIZE=30
 KEEP_GEOMETRY_FILTER_PDBS=false
-KEEP_FINAL_PDBS=false
+KEEP_FINAL_PDBS=true
 
 SCRIPT_START="$(date +%s)"
 
@@ -159,312 +159,312 @@ qv_count () {
 }
 
 
-# ============================================================
-# STEP 4 — RFDIFFUSION
-# ============================================================
+# # ============================================================
+# # STEP 4 — RFDIFFUSION
+# # ============================================================
 
-echo
-echo "============================================================"
-echo "STEP 4: RFdiffusion"
-echo "============================================================"
+# echo
+# echo "============================================================"
+# echo "STEP 4: RFdiffusion"
+# echo "============================================================"
 
-RFDIFFUSION_START="$(date +%s)"
+# RFDIFFUSION_START="$(date +%s)"
 
-for ITEM in "${REGIMES[@]}"; do
+# for ITEM in "${REGIMES[@]}"; do
 
-    NAME="${ITEM%%|*}"
-    LOOPS="${ITEM#*|}"
+#     # NAME="${ITEM%%|*}"
+#     # LOOPS="${ITEM#*|}"
 
-    OUTQV="$RFDIR/${NAME}_rfdiffusion.qv"
-    OUTSC="$RFDIR/${NAME}_rfdiffusion.sc"
+#     # OUTQV="$RFDIR/${NAME}_rfdiffusion.qv"
+#     # OUTSC="$RFDIR/${NAME}_rfdiffusion.sc"
 
-    echo
-    echo "------------------------------------------------------------"
-    echo "REGIME: $NAME"
-    echo "LOOPS:  $LOOPS"
-    echo "------------------------------------------------------------"
+#     # echo
+#     # echo "------------------------------------------------------------"
+#     # echo "REGIME: $NAME"
+#     # echo "LOOPS:  $LOOPS"
+#     # echo "------------------------------------------------------------"
 
-    REGIME_START="$(date +%s)"
+#     # REGIME_START="$(date +%s)"
 
-    EXISTING="$(qv_count "$OUTQV")"
+#     # EXISTING="$(qv_count "$OUTQV")"
 
-    # if [ "$EXISTING" -eq "$NUM_BACKBONES" ]; then
-    #     echo "RFdiffusion already complete: $EXISTING designs"
-    # else
+#     # if [ "$EXISTING" -eq "$NUM_BACKBONES" ]; then
+#     #     echo "RFdiffusion already complete: $EXISTING designs"
+#     # else
 
-    #     if [ -e "$OUTQV" ]; then
-    #         echo "Removing incomplete RFdiffusion output:"
-    #         echo "$OUTQV"
-    #         rm -f "$OUTQV"
-    #     fi
+#     #     if [ -e "$OUTQV" ]; then
+#     #         echo "Removing incomplete RFdiffusion output:"
+#     #         echo "$OUTQV"
+#     #         rm -f "$OUTQV"
+#     #     fi
 
-    #     rm -f "$OUTSC"
+#     #     rm -f "$OUTSC"
 
-    #     uv run rfdiffusion \
-    #         --target "$TARGET" \
-    #         --framework "$FRAMEWORK" \
-    #         --output-quiver "$OUTQV" \
-    #         --num-designs "$NUM_BACKBONES" \
-    #         --design-loops "$LOOPS" \
-    #         --hotspots "$HOTSPOTS"
+#     #     uv run rfdiffusion \
+#     #         --target "$TARGET" \
+#     #         --framework "$FRAMEWORK" \
+#     #         --output-quiver "$OUTQV" \
+#     #         --num-designs "$NUM_BACKBONES" \
+#     #         --design-loops "$LOOPS" \
+#     #         --hotspots "$HOTSPOTS"
 
-    #     COUNT="$(qv_count "$OUTQV")"
+#     #     COUNT="$(qv_count "$OUTQV")"
 
-    #     if [ "$COUNT" -ne "$NUM_BACKBONES" ]; then
-    #         echo "ERROR: Expected $NUM_BACKBONES RFdiffusion designs."
-    #         echo "Found: $COUNT"
-    #         exit 1
-    #     fi
-    # fi
+#     #     if [ "$COUNT" -ne "$NUM_BACKBONES" ]; then
+#     #         echo "ERROR: Expected $NUM_BACKBONES RFdiffusion designs."
+#     #         echo "Found: $COUNT"
+#     #         exit 1
+#     #     fi
+#     # fi
 
-    # qvscorefile creates sibling .sc itself.
-    rm -f "$OUTSC"
-    uv run qvscorefile "$OUTQV"
+#     # qvscorefile creates sibling .sc itself.
+#     # rm -f "$OUTSC"
+#     # uv run qvscorefile "$OUTQV"
 
-    if [ ! -s "$OUTSC" ]; then
-        echo "ERROR: RFdiffusion scorefile was not created:"
-        echo "$OUTSC"
-        exit 1
-    fi
+#     # if [ ! -s "$OUTSC" ]; then
+#     #     echo "ERROR: RFdiffusion scorefile was not created:"
+#     #     echo "$OUTSC"
+#     #     exit 1
+#     # fi
 
-    # report_duration "RFdiffusion ($NAME)" "$REGIME_START"
+#     # report_duration "RFdiffusion ($NAME)" "$REGIME_START"
 
-done
+# # done
 
-report_duration "Step 4 RFdiffusion" "$RFDIFFUSION_START"
+# report_duration "Step 4 RFdiffusion" "$RFDIFFUSION_START"
 
 
-# ============================================================
-# STEP 4B — FILTER RFDIFFUSION BACKBONES
-# ============================================================
+# # ============================================================
+# # STEP 4B — FILTER RFDIFFUSION BACKBONES
+# # ============================================================
 
-echo
-echo "============================================================"
-echo "STEP 4B: RFdiffusion geometry filtering"
-echo "mindist <= $MINDIST_MAX"
-echo "averagemin <= $AVERAGEMIN_MAX"
-echo "============================================================"
+# echo
+# echo "============================================================"
+# echo "STEP 4B: RFdiffusion geometry filtering"
+# echo "mindist <= $MINDIST_MAX"
+# echo "averagemin <= $AVERAGEMIN_MAX"
+# echo "============================================================"
 
-FILTER_START="$(date +%s)"
+# FILTER_START="$(date +%s)"
 
-for ITEM in "${REGIMES[@]}"; do
+# for ITEM in "${REGIMES[@]}"; do
 
-    NAME="${ITEM%%|*}"
+#     NAME="${ITEM%%|*}"
 
-    INPUT_QV="$RFDIR/${NAME}_rfdiffusion.qv"
-    INPUT_SC="$RFDIR/${NAME}_rfdiffusion.sc"
+#     INPUT_QV="$RFDIR/${NAME}_rfdiffusion.qv"
+#     INPUT_SC="$RFDIR/${NAME}_rfdiffusion.sc"
 
-    FILTERED_QV="$FILTERDIR/${NAME}_filtered.qv"
-    SUMMARY="$FILTERDIR/${NAME}_filter_summary.tsv"
-    TEMPDIR="$FILTERDIR/${NAME}_temp_pdbs"
+#     FILTERED_QV="$FILTERDIR/${NAME}_filtered.qv"
+#     SUMMARY="$FILTERDIR/${NAME}_filter_summary.tsv"
+#     TEMPDIR="$FILTERDIR/${NAME}_temp_pdbs"
 
-    echo
-    echo "------------------------------------------------------------"
-    echo "Filtering: $NAME"
-    echo "------------------------------------------------------------"
+#     echo
+#     echo "------------------------------------------------------------"
+#     echo "Filtering: $NAME"
+#     echo "------------------------------------------------------------"
 
-    REGIME_START="$(date +%s)"
-
-    rm -rf "$TEMPDIR"
-    mkdir -p "$TEMPDIR"
+#     REGIME_START="$(date +%s)"
+
+# #     rm -rf "$TEMPDIR"
+# #     mkdir -p "$TEMPDIR"
 
-    # Extract all RFdiffusion designs.
-    uv run qvextract \
-        "$INPUT_QV" \
-        -o "$TEMPDIR"
-
-    # Parse scorefile and delete failing structures.
-    INPUT_SC="$INPUT_SC" \
-    TEMPDIR="$TEMPDIR" \
-    SUMMARY="$SUMMARY" \
-    MINDIST_MAX="$MINDIST_MAX" \
-    AVERAGEMIN_MAX="$AVERAGEMIN_MAX" \
-    uv run python - <<'PY'
-import os
-from pathlib import Path
+# #     # Extract all RFdiffusion designs.
+# #     uv run qvextract \
+# #         "$INPUT_QV" \
+# #         -o "$TEMPDIR"
+
+# #     # Parse scorefile and delete failing structures.
+# #     INPUT_SC="$INPUT_SC" \
+# #     TEMPDIR="$TEMPDIR" \
+# #     SUMMARY="$SUMMARY" \
+# #     MINDIST_MAX="$MINDIST_MAX" \
+# #     AVERAGEMIN_MAX="$AVERAGEMIN_MAX" \
+# #     uv run python - <<'PY'
+# # import os
+# # from pathlib import Path
 
-sc = Path(os.environ["INPUT_SC"])
-tempdir = Path(os.environ["TEMPDIR"])
-summary = Path(os.environ["SUMMARY"])
+# # sc = Path(os.environ["INPUT_SC"])
+# # tempdir = Path(os.environ["TEMPDIR"])
+# # summary = Path(os.environ["SUMMARY"])
 
-mindist_max = float(os.environ["MINDIST_MAX"])
-averagemin_max = float(os.environ["AVERAGEMIN_MAX"])
+# # mindist_max = float(os.environ["MINDIST_MAX"])
+# # averagemin_max = float(os.environ["AVERAGEMIN_MAX"])
 
-with sc.open() as f:
-    header = f.readline().split()
+# # with sc.open() as f:
+# #     header = f.readline().split()
 
-    mindist_i = header.index("mindist")
-    averagemin_i = header.index("averagemin")
-    tag_i = header.index("tag")
+# #     mindist_i = header.index("mindist")
+# #     averagemin_i = header.index("averagemin")
+# #     tag_i = header.index("tag")
 
-    rows = []
-    passing = set()
+# #     rows = []
+# #     passing = set()
 
-    for line in f:
-        if not line.strip():
-            continue
+# #     for line in f:
+# #         if not line.strip():
+# #             continue
 
-        cols = line.split()
+# #         cols = line.split()
 
-        try:
-            mindist = float(cols[mindist_i])
-            averagemin = float(cols[averagemin_i])
-        except (ValueError, IndexError):
-            continue
+# #         try:
+# #             mindist = float(cols[mindist_i])
+# #             averagemin = float(cols[averagemin_i])
+# #         except (ValueError, IndexError):
+# #             continue
 
-        tag = cols[tag_i]
+# #         tag = cols[tag_i]
 
-        passed = (
-            mindist <= mindist_max
-            and averagemin <= averagemin_max
-        )
+# #         passed = (
+# #             mindist <= mindist_max
+# #             and averagemin <= averagemin_max
+# #         )
 
-        rows.append((tag, mindist, averagemin, passed))
+# #         rows.append((tag, mindist, averagemin, passed))
 
-        if passed:
-            passing.add(tag)
+# #         if passed:
+# #             passing.add(tag)
 
-with summary.open("w") as out:
-    out.write("tag\tmindist\taveragemin\tpass\n")
+# # with summary.open("w") as out:
+# #     out.write("tag\tmindist\taveragemin\tpass\n")
 
-    for tag, mindist, averagemin, passed in rows:
-        out.write(
-            f"{tag}\t{mindist:.3f}\t"
-            f"{averagemin:.3f}\t{passed}\n"
-        )
+# #     for tag, mindist, averagemin, passed in rows:
+# #         out.write(
+# #             f"{tag}\t{mindist:.3f}\t"
+# #             f"{averagemin:.3f}\t{passed}\n"
+# #         )
 
-for pdb in tempdir.glob("*.pdb"):
-    if pdb.stem not in passing:
-        pdb.unlink()
+# # for pdb in tempdir.glob("*.pdb"):
+# #     if pdb.stem not in passing:
+# #         pdb.unlink()
 
-print(f"Passed {len(passing)}/{len(rows)} designs")
+# # print(f"Passed {len(passing)}/{len(rows)} designs")
 
-for tag, mindist, averagemin, passed in rows:
-    if passed:
-        print(
-            f" PASS {tag:25s} "
-            f"mindist={mindist:.2f} "
-            f"averagemin={averagemin:.2f}"
-        )
-PY
+# # for tag, mindist, averagemin, passed in rows:
+# #     if passed:
+# #         print(
+# #             f" PASS {tag:25s} "
+# #             f"mindist={mindist:.2f} "
+# #             f"averagemin={averagemin:.2f}"
+# #         )
+# # PY
 
-    PASS_COUNT="$(find "$TEMPDIR" -maxdepth 1 -name '*.pdb' | wc -l)"
+# #     PASS_COUNT="$(find "$TEMPDIR" -maxdepth 1 -name '*.pdb' | wc -l)"
 
-    echo
-    echo "Passing backbones: $PASS_COUNT"
+# #     echo
+# #     echo "Passing backbones: $PASS_COUNT"
 
-    rm -f "$FILTERED_QV"
+# #     rm -f "$FILTERED_QV"
 
-    if [ "$PASS_COUNT" -eq 0 ]; then
-        echo "WARNING: No passing backbones for $NAME."
-        echo "Skipping ProteinMPNN/RF2 for this regime."
-        report_duration "Filtering ($NAME)" "$REGIME_START"
-        continue
-    fi
+# #     if [ "$PASS_COUNT" -eq 0 ]; then
+# #         echo "WARNING: No passing backbones for $NAME."
+# #         echo "Skipping ProteinMPNN/RF2 for this regime."
+# #         report_duration "Filtering ($NAME)" "$REGIME_START"
+# #         continue
+# #     fi
 
-    # qvfrompdbs writes Quiver binary to stdout.
-    uv run qvfrompdbs \
-        "$TEMPDIR"/*.pdb \
-        > "$FILTERED_QV"
+# #     # qvfrompdbs writes Quiver binary to stdout.
+# #     uv run qvfrompdbs \
+# #         "$TEMPDIR"/*.pdb \
+# #         > "$FILTERED_QV"
 
-    CREATED="$(qv_count "$FILTERED_QV")"
+# #     CREATED="$(qv_count "$FILTERED_QV")"
 
-    if [ "$CREATED" -ne "$PASS_COUNT" ]; then
-        echo "ERROR: Filtered Quiver count mismatch."
-        echo "Expected: $PASS_COUNT"
-        echo "Created:  $CREATED"
-        exit 1
-    fi
+# #     if [ "$CREATED" -ne "$PASS_COUNT" ]; then
+# #         echo "ERROR: Filtered Quiver count mismatch."
+# #         echo "Expected: $PASS_COUNT"
+# #         echo "Created:  $CREATED"
+# #         exit 1
+# #     fi
 
-    if [ "$KEEP_GEOMETRY_FILTER_PDBS" != true ]; then
-        rm -rf "$TEMPDIR"
-    fi
+# #     if [ "$KEEP_GEOMETRY_FILTER_PDBS" != true ]; then
+# #         rm -rf "$TEMPDIR"
+# #     fi
 
-    echo "Filtered Quiver contains $CREATED backbones."
+# #     echo "Filtered Quiver contains $CREATED backbones."
 
-    report_duration "Filtering ($NAME)" "$REGIME_START"
+# #     report_duration "Filtering ($NAME)" "$REGIME_START"
 
-done
+# done
 
-report_duration "Step 4B geometry filtering" "$FILTER_START"
+# report_duration "Step 4B geometry filtering" "$FILTER_START"
 
 
-# ============================================================
-# STEP 5 — PROTEINMPNN
-# ============================================================
+# # ============================================================
+# # STEP 5 — PROTEINMPNN
+# # ============================================================
 
-echo
-echo "============================================================"
-echo "STEP 5: ProteinMPNN"
-echo "============================================================"
+# echo
+# echo "============================================================"
+# echo "STEP 5: ProteinMPNN"
+# echo "============================================================"
 
-MPNN_START="$(date +%s)"
+# MPNN_START="$(date +%s)"
 
-for ITEM in "${REGIMES[@]}"; do
+# # for ITEM in "${REGIMES[@]}"; do
 
-    NAME="${ITEM%%|*}"
+# #     NAME="${ITEM%%|*}"
 
-    INPUT="$FILTERDIR/${NAME}_filtered.qv"
-    OUTPUT="$MPNNDIR/${NAME}_mpnn.qv"
+# #     INPUT="$FILTERDIR/${NAME}_filtered.qv"
+# #     OUTPUT="$MPNNDIR/${NAME}_mpnn.qv"
 
-    echo
-    echo "------------------------------------------------------------"
-    echo "ProteinMPNN: $NAME"
-    echo "------------------------------------------------------------"
+# #     echo
+# #     echo "------------------------------------------------------------"
+# #     echo "ProteinMPNN: $NAME"
+# #     echo "------------------------------------------------------------"
 
-    REGIME_START="$(date +%s)"
+# #     REGIME_START="$(date +%s)"
 
-    if [ ! -s "$INPUT" ]; then
-        echo "No filtered backbones. Skipping."
-        report_duration "ProteinMPNN ($NAME)" "$REGIME_START"
-        continue
-    fi
+# #     if [ ! -s "$INPUT" ]; then
+# #         echo "No filtered backbones. Skipping."
+# #         report_duration "ProteinMPNN ($NAME)" "$REGIME_START"
+# #         continue
+# #     fi
 
-    BACKBONES="$(qv_count "$INPUT")"
-    EXPECTED=$((BACKBONES * SEQS_PER_BACKBONE))
+# #     BACKBONES="$(qv_count "$INPUT")"
+# #     EXPECTED=$((BACKBONES * SEQS_PER_BACKBONE))
 
-    if [ -s "$OUTPUT" ]; then
-        EXISTING="$(qv_count "$OUTPUT")"
-    else
-        EXISTING=0
-    fi
+# #     if [ -s "$OUTPUT" ]; then
+# #         EXISTING="$(qv_count "$OUTPUT")"
+# #     else
+# #         EXISTING=0
+# #     fi
 
-    if [ "$EXISTING" -eq "$EXPECTED" ]; then
-        echo "ProteinMPNN already complete:"
-        echo "$EXISTING sequences"
-        report_duration "ProteinMPNN ($NAME)" "$REGIME_START"
-        continue
-    fi
+# #     if [ "$EXISTING" -eq "$EXPECTED" ]; then
+# #         echo "ProteinMPNN already complete:"
+# #         echo "$EXISTING sequences"
+# #         report_duration "ProteinMPNN ($NAME)" "$REGIME_START"
+# #         continue
+# #     fi
 
-    if [ -e "$OUTPUT" ]; then
-        echo "Removing incomplete ProteinMPNN output."
-        rm -f "$OUTPUT"
-    fi
+# #     if [ -e "$OUTPUT" ]; then
+# #         echo "Removing incomplete ProteinMPNN output."
+# #         rm -f "$OUTPUT"
+# #     fi
 
-    echo "Backbones: $BACKBONES"
-    echo "Sequences/backbone: $SEQS_PER_BACKBONE"
-    echo "Expected sequences: $EXPECTED"
+# #     echo "Backbones: $BACKBONES"
+# #     echo "Sequences/backbone: $SEQS_PER_BACKBONE"
+# #     echo "Expected sequences: $EXPECTED"
 
-    uv run proteinmpnn \
-        -q "$INPUT" \
-        --output-quiver "$OUTPUT" \
-        -n "$SEQS_PER_BACKBONE" \
-        -t "$MPNN_TEMP"
+# #     uv run proteinmpnn \
+# #         -q "$INPUT" \
+# #         --output-quiver "$OUTPUT" \
+# #         -n "$SEQS_PER_BACKBONE" \
+# #         -t "$MPNN_TEMP"
 
-    CREATED="$(qv_count "$OUTPUT")"
+# #     CREATED="$(qv_count "$OUTPUT")"
 
-    echo "ProteinMPNN generated: $CREATED"
+# #     echo "ProteinMPNN generated: $CREATED"
 
-    if [ "$CREATED" -ne "$EXPECTED" ]; then
-        echo "WARNING: Expected $EXPECTED sequence designs."
-        echo "ProteinMPNN produced $CREATED."
-    fi
+# #     if [ "$CREATED" -ne "$EXPECTED" ]; then
+# #         echo "WARNING: Expected $EXPECTED sequence designs."
+# #         echo "ProteinMPNN produced $CREATED."
+# #     fi
 
-    report_duration "ProteinMPNN ($NAME)" "$REGIME_START"
+# #     report_duration "ProteinMPNN ($NAME)" "$REGIME_START"
 
-done
+# # done
 
-report_duration "Step 5 ProteinMPNN" "$MPNN_START"
+# report_duration "Step 5 ProteinMPNN" "$MPNN_START"
 
 
 # ============================================================
@@ -528,7 +528,8 @@ for ITEM in "${REGIMES[@]}"; do
 
         uv run rf2 \
             -q "$INPUT" \
-            --output-quiver "$OUTPUT"
+            --output-quiver "$OUTPUT" \
+            --hotspot-show-prop 1
 
         CREATED="$(qv_count "$OUTPUT")"
 

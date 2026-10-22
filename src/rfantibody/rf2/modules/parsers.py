@@ -42,9 +42,6 @@ def parse_HLT_lines(lines: list[str]) -> Dotdict:
 
     fix_any_duplicates(out)
 
-    # Reorder chains to T-H-L (Target first, to match rf_antibody)
-    reorder_chains_to_THL(out)
-
     return out
 
 def parse_pdblines(lines: list[str]) -> tuple[torch.Tensor, list, torch.Tensor]:

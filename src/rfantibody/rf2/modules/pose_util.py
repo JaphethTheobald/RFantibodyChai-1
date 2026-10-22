@@ -160,14 +160,17 @@ class Pose:
     @property
     def same_chain(self) -> torch.Tensor:
         """
-        Returns a mask for the same chain.
-        Note both antibody chains go on same chain
-        Returns a boolean tensor for proper masking operations.
+        Returns the target-versus-antibody group mask used by RF2.
+
+        H and L intentionally form one antibody group. This is derived from
+        chain labels, not positional slices, so H-L-T is handled correctly.
         """
-        same_chain = torch.zeros((self.length, self.length), dtype=torch.bool)
-        same_chain[:self.target_length, :self.target_length] = True
-        same_chain[self.target_length:, self.target_length:] = True
-        return same_chain
+        target = self.target_mask
+        antibody = self.antibody_mask
+        return (
+            (target[:, None] & target[None, :])
+            | (antibody[:, None] & antibody[None, :])
+        )
 
 @dataclass
 class CDR:
