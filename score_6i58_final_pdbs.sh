@@ -10,12 +10,12 @@ set -euo pipefail
 # ============================================================
 
 RFAB="$HOME/RFantibody"
-BASE="$HOME/Documents/RFantibody_outputs/6i58_campaign_1500"
+BASE="/home/schrogpu/Documents/RFantibody_outputs/8ol9_long_goodpae_chai"
 
 SCORE_DIR="$BASE/06_chai_target_template"
-RAW_DIR="$SCORE_DIR/short_raw"
-SCORE_FILE="$SCORE_DIR/6i58_chai_prelim_rf2.sc"
-PDB_DIR="$BASE/07_final_pdbs_target_template/short"
+RAW_DIR="$SCORE_DIR/long_raw"
+SCORE_FILE="$SCORE_DIR/8ol9_chai_prelim_rf2.sc"
+PDB_DIR="$BASE/07_final_pdbs_target_template/long"
 OUTPUT_DIR="$BASE/08_filtered_PDBs_score_review"
 
 CDR_RMSD_MAX=3

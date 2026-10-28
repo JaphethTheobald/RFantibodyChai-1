@@ -7,8 +7,8 @@ Interactive mode:
     python3 pdb_to_afserver_template.py
 
 Command-line mode:
-    python3 pdb_to_afserver_template.py ./7QOTA2A3trunc.pdb \
-        --chain A --query-fasta ./7qota2a3trunc.fasta --out-dir af_template
+    python3 pdb_to_afserver_template.py ./4a5t_trunc.pdb \
+        --chain S --query-fasta ./4a5t_trunc.fasta --out-dir af_template
 
 The output mmCIF contains exactly one cleaned protein chain.  The mapping JSON
 uses the AlphaFold Server format: 0-based queryIndices and templateIndices.

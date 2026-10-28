@@ -18,25 +18,29 @@ set -euo pipefail
 
 # Paths
 RFAB="$HOME/RFantibody"
-BASE="$HOME/Documents/RFantibody_outputs/8ol9_2nd_hydrophobic1long"
+BASE="$HOME/Documents/RFantibody_outputs/8ol9_chaifav4_chai2"
 FRAMEWORK="$RFAB/scripts/examples/example_inputs/h-NbBCII10.pdb"
-TARGET="$RFAB/8OL9_noLC.pdb"
+TARGET="$RFAB/8ol9_LC.pdb"
 FULL_TARGET_FASTA="$RFAB/8ol9H.fasta"
 ADDITIONAL_TARGET_FASTA="$RFAB/8ol9L.fasta"
 TARGET_TEMPLATE_PDB="$RFAB/8OL9_noLC.pdb"
 TARGET_TEMPLATE_CIF_GZ="$RFAB/chai_templates/8OL9_noLC_chain_H_template.cif.gz"
 
 # RFdiffusion and ProteinMPNN
-NUM_BACKBONES=200
+NUM_BACKBONES=400
 SEQS_PER_BACKBONE=5
 MPNN_TEMP=0.2
 MINDIST_MAX=6
 AVERAGEMIN_MAX=10
 
-# HOTSPOTS="H212,H215,H216,H217" #Imitates FaB in crystal structure. later note: is this longbinidng? - yes
+# HOTSPOTS="H212,H215,H216,H217" #Imitates FaB in crystal structure. later note: is this longbinidng? - yes, and it sucks dont do it
 # HOTSPOTS="H204,H223" #hbinding1
-HOTSPOTS="H85,H161,H155" #hydrophobicbinding2 yet to do
-# HOTSPOTS="H176" # Phe that things like to bind to with chai
+# HOTSPOTS="H175,H204" #hydrophobicbinding1.5
+# HOTSPOTS="H85,H161,H155" #hydrophobicbinding2 NO results with chai after 200bb
+HOTSPOTS="H176,H204,H274" # Phe that things like to bind to with chai and LC
+# HOTSPOTS="H127,H128,H129" #epitope
+# HOTSPOTS="H75,H76" #chailongfavorite3
+# HOTSPOTS="H76,H77,H112,H113,H191,H195" #goodpae
 
 # Regime format: name|loops|framework PDB|target PDB|hotspots
 REGIMES=(

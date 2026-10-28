@@ -17,7 +17,7 @@ RFAB="$HOME/RFantibody"
 TARGET="$HOME/RFantibody/8OL9_noLC.pdb"
 FRAMEWORK="$RFAB/scripts/examples/example_inputs/h-NbBCII10.pdb"
 
-BASE="$HOME/Documents/RFantibody_outputs/8ol9_hydrophobic_test1"
+BASE="$HOME/Documents/RFantibody_outputs/8ol9_hydrophobic1-5_short_test1"
 
 RFDIR="$BASE/04_rfdiffusion"
 FILTERDIR="$BASE/04b_filtered"
@@ -101,8 +101,8 @@ HOTSPOTS="H204,H175" #hbinding1.5
 # HOTSPOTS="H85,H161,H155" #hydrophobicbinding2 yet to do
 
 REGIMES=(
-    # "short|H1:7,H2:6,H3:5-9"
-    "long|H1:7,H2:6,H3:10-16"
+    "short|H1:7,H2:6,H3:5-9"
+    # "long|H1:7,H2:6,H3:10-16"
 )
 
 
@@ -193,21 +193,21 @@ for ITEM in "${REGIMES[@]}"; do
         echo "RFdiffusion already complete: $EXISTING designs"
     else
 
-        # if [ -e "$OUTQV" ]; then
-        #     echo "Removing incomplete RFdiffusion output:"
-        #     echo "$OUTQV"
-        #     rm -f "$OUTQV"
-        # fi
+        if [ -e "$OUTQV" ]; then
+            echo "Removing incomplete RFdiffusion output:"
+            echo "$OUTQV"
+            rm -f "$OUTQV"
+        fi
 
-        # rm -f "$OUTSC"
+        rm -f "$OUTSC"
 
-        # uv run rfdiffusion \
-        #     --target "$TARGET" \
-        #     --framework "$FRAMEWORK" \
-        #     --output-quiver "$OUTQV" \
-        #     --num-designs "$NUM_BACKBONES" \
-        #     --design-loops "$LOOPS" \
-        #     --hotspots "$HOTSPOTS"
+        uv run rfdiffusion \
+            --target "$TARGET" \
+            --framework "$FRAMEWORK" \
+            --output-quiver "$OUTQV" \
+            --num-designs "$NUM_BACKBONES" \
+            --design-loops "$LOOPS" \
+            --hotspots "$HOTSPOTS"
 
         COUNT="$(qv_count "$OUTQV")"
 
